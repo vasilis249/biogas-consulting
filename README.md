@@ -7,6 +7,13 @@
 > Πρωτότυπο προϊόν. Σχεδιασμένο από γενικές έννοιες του χώρου — δεν αντιγράφει
 > κώδικα, UI ή branding τρίτων.
 
+## 🔎 Live demo (χωρίς backend)
+Το [`demo/index.html`](demo/index.html) τρέχει ολόκληρη την εφαρμογή με **mock
+δεδομένα** (in-memory) — χωρίς Supabase. Ιδανικό για γρήγορη περιήγηση. Μπαίνει
+αυτόματα σαν platform admin· οι αλλαγές δεν αποθηκεύονται (reset στο refresh).
+Ανέβασέ το σε Netlify/Vercel/Cloudflare Pages ή GitHub Pages για online link
+(π.χ. `…/demo/`).
+
 ## Stack
 - **Frontend:** ένα `index.html` + vanilla JS (ESM), χωρίς build.
 - **Backend:** [Supabase](https://supabase.com) — PostgreSQL + Auth + Storage + Row-Level Security.
