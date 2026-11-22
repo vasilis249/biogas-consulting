@@ -81,7 +81,12 @@ tenant ──< units ──< samples ──< analyses >── parameters
 - **Φάση 3:** διαχείριση χρηστών & προσκλήσεις ✅ · MFA/TOTP ✅ · audit log UI ✅
 - **Φάση 4:** αρχεία/φωτό ανά δείγμα (Supabase Storage) ✅ · Οικονομικά UI (τιμολόγια) ✅ · branding ανά πελάτη (χρώμα/όνομα) ✅ · **EL/EN toggle: εκκρεμεί** (ξεχωριστό i18n pass)
 - **Φάση 5:** forgot-password + email-OTP login ✅ · presence/«online» χρήστες (`last_seen`) ✅ · Backup/Export (JSON) ✅ · Μηνιαία αναφορά (ΥΠΕΝ-style, Excel+εκτύπωση) ✅
-- **Μελλοντικά:** email προσκλήσεων (Edge Function), ειδοποιήσεις, πλήρες EL/EN.
+- **Φάση 6 (BioGas edition):** προσαρμογή σε **biogas plant operation & consulting** ✅
+  - Biogas παράμετροι σταθερότητας & ποιότητας αερίου (pH χωνευτή, FOS/TAC, VFA, TS/VS, NH₄-N, CH₄, CO₂, H₂S, O₂) με ιδανικά εύρη → το dashboard σημαίνει ασταθείς χωνευτές.
+  - Μεταδεδομένα μονάδας/χωνευτή (ισχύς ΣΗΘ kWel, όγκος m³) + biogas τύποι δειγμάτων (χωνευτής/υπόστρωμα/βιοαέριο/χώνευμα/εισροή/εκροή).
+  - Νέο module **Παραγωγή**: ημερήσιο log (τροφοδοσία t, βιοαέριο m³, CH₄ %, kWh el/th, ώρες ΣΗΘ) + KPIs (MWh, Μ.Ο. CH₄, διαθεσιμότητα ΣΗΘ, ειδική απόδοση m³/t) + Excel.
+  - `db/migrations/0006_biogas.sql` (+ πίνακας `production`, RLS, audit — validated σε Postgres 16).
+- **Μελλοντικά:** feedstock recipe/OLR·HRT αυτόματα, RED III GHG savings / αειφορία (ISCC), guarantees of origin (ΔΑΠΕΕΠ), email προσκλήσεων (Edge Function), πλήρες EL/EN.
 
 ### Migrations (συνέχεια)
 - `0005_phase5.sql`: `profiles.last_seen` + audit guard (τα heartbeats δεν καταγράφονται).

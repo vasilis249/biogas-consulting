@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>LabPortal — DEMO</title>
+<title>BioGas — Παραγωγή & Αναλύσεις</title>
 <style>
   :root{
     --bg:#f3eee2; --surface:#fffdf8; --surface-2:#f8f2e7;
@@ -140,7 +140,7 @@
 <!-- ============================ SETUP (Supabase keys) ============================ -->
 <div id="setup" class="center-wrap hidden">
   <div class="auth-card card">
-    <div class="brand" style="margin-bottom:6px"><span class="dot">◉</span> LabPortal</div>
+    <div class="brand" style="margin-bottom:6px"><span class="dot">◉</span> BioGas</div>
     <p class="muted small">Σύνδεσε το Supabase project σου. Το <b>anon key</b> είναι δημόσιο — αποθηκεύεται τοπικά στον browser.</p>
     <div id="setup-msg"></div>
     <div class="field"><label>Supabase URL</label><input id="su-url" class="input" placeholder="https://xxxx.supabase.co"></div>
@@ -152,7 +152,7 @@
 <!-- ============================ LOGIN ============================ -->
 <div id="login" class="center-wrap hidden">
   <div class="auth-card card">
-    <div class="brand" style="margin-bottom:4px"><span class="dot">◉</span> LabPortal</div>
+    <div class="brand" style="margin-bottom:4px"><span class="dot">◉</span> BioGas</div>
     <p class="muted small" style="margin-top:4px">Πλατφόρμα εργαστηριακών αναλύσεων</p>
     <div id="login-msg"></div>
     <form id="login-form">
@@ -177,10 +177,11 @@
 <div id="app" class="hidden">
   <div class="scrim hidden" id="scrim"></div>
   <aside class="sidebar" id="sidebar">
-    <div class="brand" style="font-size:18px;margin:4px 6px 16px"><span class="dot">◉</span> LabPortal</div>
+    <div class="brand" style="font-size:18px;margin:4px 6px 16px"><span class="dot">◉</span> BioGas</div>
     <button class="nav-item active" data-view="dashboard"><span class="ic">▣</span> Επισκόπηση</button>
     <button class="nav-item" data-view="samples"><span class="ic">🧪</span> Δείγματα</button>
     <button class="nav-item" data-view="bulk"><span class="ic">⊞</span> Μαζική καταχώρηση</button>
+    <button class="nav-item" data-view="production"><span class="ic">⚡</span> Παραγωγή</button>
     <button class="nav-item" data-view="reports"><span class="ic">📊</span> Reports</button>
     <div class="nav-sep"></div>
     <div class="small muted" style="padding:4px 12px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.05em">Διαχείριση</div>
@@ -219,7 +220,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-/* ===== DEMO MODE: in-memory mock of the Supabase client (no backend) ===== */
+/* ===== DEMO MODE: in-memory mock Supabase client — BioGas edition ===== */
 (function(){
   const uid=()=> (crypto.randomUUID?crypto.randomUUID():'id-'+Math.random().toString(16).slice(2));
   const now=new Date(); const iso=(d)=>d.toISOString();
@@ -227,44 +228,53 @@
   const minsAgo=(n)=>{const d=new Date(now); d.setMinutes(d.getMinutes()-n); return iso(d);};
   const T='11111111-1111-1111-1111-111111111111';
   const DB={
-    tenants:[{id:T,name:'Demo Αγρόκτημα',slug:'demo',settings:{brand_color:'#2d6a49'},created_at:daysAgo(90)}],
+    tenants:[{id:T,name:'Βιοαέριο Θεσσαλίας ΑΕ',slug:'biogas-thess',settings:{brand_color:'#2d6a49'},created_at:daysAgo(120)}],
     profiles:[
-      {id:'demo-user',email:'demo@labportal.app',full_name:'Demo Admin',role:'admin',is_platform_admin:true,tenant_id:T,last_seen:minsAgo(0),created_at:daysAgo(90)},
-      {id:'u2',email:'operator@demo.gr',full_name:'Μαρία Οπερατέρ',role:'operator',is_platform_admin:false,tenant_id:T,last_seen:minsAgo(3),created_at:daysAgo(40)},
-      {id:'u3',email:'pending@demo.gr',full_name:'Νέος Χρήστης',role:'viewer',is_platform_admin:false,tenant_id:null,last_seen:null,created_at:daysAgo(3)}
+      {id:'demo-user',email:'demo@biogas.gr',full_name:'Μηχανικός Λειτουργίας',role:'admin',is_platform_admin:true,tenant_id:T,last_seen:minsAgo(0),created_at:daysAgo(120)},
+      {id:'u2',email:'operator@biogas.gr',full_name:'Χειριστής Βάρδιας',role:'operator',is_platform_admin:false,tenant_id:T,last_seen:minsAgo(4),created_at:daysAgo(60)},
+      {id:'u3',email:'consultant@biogas.gr',full_name:'Σύμβουλος',role:'viewer',is_platform_admin:false,tenant_id:null,last_seen:null,created_at:daysAgo(3)}
     ],
     parameters:[
-      ['ph','pH','pH','',5.5,6.5,10],['ec','Αγωγιμότητα','EC','mS/cm',1.5,2.5,20],
-      ['n','Άζωτο (N)','Nitrogen','mg/l',100,200,30],['p','Φώσφορος (P)','Phosphorus','mg/l',30,50,40],
-      ['k','Κάλιο (K)','Potassium','mg/l',150,300,50],['ca','Ασβέστιο (Ca)','Calcium','mg/l',100,200,60],
-      ['mg','Μαγνήσιο (Mg)','Magnesium','mg/l',30,60,70],['temp','Θερμοκρασία','Temperature','°C',18,26,80],
-      ['moist','Υγρασία','Moisture','%',60,80,90]
+      ['ph_dig','pH χωνευτή','Digester pH','',7.4,8.2,10],['fos_tac','FOS/TAC','FOS/TAC','',0.2,0.4,20],
+      ['temp_dig','Θερμοκρασία χωνευτή','Digester temp','°C',38,42,30],['ts','Ξηρά ουσία (TS)','TS','%',7,12,40],
+      ['vs','Οργανική ουσία (VS)','VS','% TS',70,85,50],['vfa','Πτητικά οξέα (VFA)','VFA','mg/l',0,2000,60],
+      ['nh4','Αμμωνιακό N (NH₄-N)','Ammonium N','mg/l',500,3000,70],['ch4','Μεθάνιο (CH₄)','Methane','%',50,60,80],
+      ['co2','Διοξείδιο (CO₂)','CO2','%',38,48,90],['h2s','Υδρόθειο (H₂S)','H2S','ppm',0,300,100],['o2','Οξυγόνο (O₂)','O2','%',0,1,110]
     ].map(r=>({id:'p-'+r[0],tenant_id:null,code:r[0],label_el:r[1],label_en:r[2],default_unit:r[3],ideal_min:r[4],ideal_max:r[5],sort_order:r[6]})),
-    units:[{id:'un1',tenant_id:T,name:'Θερμοκήπιο Α',location:'Τομέας 1',notes:null,created_at:daysAgo(80)},
-           {id:'un2',tenant_id:T,name:'Λιμνοδεξαμενή Β',location:'Τομέας 3',notes:null,created_at:daysAgo(70)}],
-    samples:[], analyses:[], files:[], audit_log:[],
+    units:[{id:'un1',tenant_id:T,name:'Χωνευτής 1',location:'Γραμμή Α',capacity_kw:500,digester_m3:2500,notes:null,created_at:daysAgo(110)},
+           {id:'un2',tenant_id:T,name:'Χωνευτής 2',location:'Γραμμή Β',capacity_kw:999,digester_m3:4000,notes:null,created_at:daysAgo(100)}],
+    samples:[], analyses:[], files:[], audit_log:[], production:[],
     invoices:[
-      {id:'i1',tenant_id:T,period:now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'),amount:450,currency:'EUR',status:'issued',issued_at:daysAgo(5).slice(0,10),notes:'Μηνιαίες αναλύσεις',created_at:daysAgo(5)},
-      {id:'i2',tenant_id:T,period:now.getFullYear()+'-'+String(now.getMonth()).padStart(2,'0'),amount:380,currency:'EUR',status:'paid',issued_at:daysAgo(35).slice(0,10),notes:null,created_at:daysAgo(35)}
+      {id:'i1',tenant_id:T,period:now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'),amount:1200,currency:'EUR',status:'issued',issued_at:daysAgo(5).slice(0,10),notes:'Σύμβουλος λειτουργίας',created_at:daysAgo(5)},
+      {id:'i2',tenant_id:T,period:now.getFullYear()+'-'+String(now.getMonth()).padStart(2,'0'),amount:1200,currency:'EUR',status:'paid',issued_at:daysAgo(35).slice(0,10),notes:null,created_at:daysAgo(35)}
     ],
-    invitations:[{id:'inv1',tenant_id:T,email:'invitee@demo.gr',role:'operator',invited_by:'demo-user',created_at:daysAgo(2),accepted_at:null}]
+    invitations:[{id:'inv1',tenant_id:T,email:'neos@biogas.gr',role:'operator',invited_by:'demo-user',created_at:daysAgo(2),accepted_at:null}]
   };
   const mk=(code,unit,kind,day,vals)=>{ const sid='s-'+code;
     DB.samples.push({id:sid,tenant_id:T,unit_id:unit,code,kind,status:'done',taken_at:daysAgo(day).slice(0,10),notes:null,created_by:'demo-user',created_at:daysAgo(day)});
     Object.entries(vals).forEach(([c,v])=>DB.analyses.push({id:uid(),tenant_id:T,sample_id:sid,parameter_id:'p-'+c,value:v,unit:(DB.parameters.find(p=>p.code===c)||{}).default_unit||null,measured_at:daysAgo(day),created_by:'demo-user',created_at:daysAgo(day)}));
   };
-  mk('L-001','un1','leaf',2,{ph:6.1,ec:2.0,n:150,p:40,k:220});
-  mk('L-002','un1','leaf',6,{ph:7.2,ec:3.1,n:90,p:35,k:260});
-  mk('S-001','un2','reservoir',9,{ph:5.9,ec:1.8,n:180,p:28,k:300});
-  mk('W-001','un2','water',12,{ph:6.3,ec:2.2,k:180,ca:150});
+  // digester stability + gas quality samples (some out of range)
+  mk('D1-W47','un1','digester',2,{ph_dig:7.8,fos_tac:0.28,temp_dig:41,ts:9.2,vs:78,vfa:850,nh4:2100});
+  mk('G1-W47','un1','biogas',2,{ch4:53,co2:44,h2s:180,o2:0.3});
+  mk('D2-W47','un2','digester',3,{ph_dig:7.5,fos_tac:0.55,temp_dig:40,ts:8.1,vs:75,vfa:3100,nh4:2600}); // FOS/TAC & VFA high
+  mk('G2-W47','un2','biogas',3,{ch4:48,co2:49,h2s:450,o2:0.5}); // CH4 low, H2S high
+  mk('D1-W46','un1','digester',9,{ph_dig:7.9,fos_tac:0.26,temp_dig:41,ts:9.5,vs:79});
+  // production logs — last 16 days, current month
+  const pd=(dayOffset,unit,feed,gas,ch4,el,th,h)=>DB.production.push({id:uid(),tenant_id:T,unit_id:unit,log_date:daysAgo(dayOffset).slice(0,10),feedstock_t:feed,biogas_m3:gas,ch4_pct:ch4,kwh_el:el,kwh_th:th,chp_hours:h,notes:null,created_by:'demo-user',created_at:daysAgo(dayOffset)});
+  for(let i=1;i<=16;i++){ const j=(i*7)%5;
+    pd(i,'un1', 21+j*0.5, 10200+j*120, 52.5+ (j%3)*0.5, 11300+j*90, 6800+j*60, 23.5 - (i===4?4:0));  // day 4 a dip
+    pd(i,'un2', 30+j*0.6, 17800+j*150, 53.0+ (j%2)*0.4, 20500+j*110, 12000+j*80, 23.7);
+  }
   DB.audit_log=[
-    {id:1,tenant_id:T,user_id:'demo-user',action:'insert',entity:'samples',entity_id:'s-L-001',created_at:daysAgo(2)},
-    {id:2,tenant_id:T,user_id:'demo-user',action:'insert',entity:'analyses',entity_id:uid(),created_at:daysAgo(2)},
-    {id:3,tenant_id:T,user_id:'u2',action:'update',entity:'invoices',entity_id:'i1',created_at:daysAgo(5)},
-    {id:4,tenant_id:T,user_id:'demo-user',action:'delete',entity:'files',entity_id:uid(),created_at:daysAgo(7)}
+    {id:1,tenant_id:T,user_id:'demo-user',action:'insert',entity:'production',entity_id:uid(),created_at:daysAgo(1)},
+    {id:2,tenant_id:T,user_id:'u2',action:'insert',entity:'analyses',entity_id:uid(),created_at:daysAgo(2)},
+    {id:3,tenant_id:T,user_id:'demo-user',action:'update',entity:'units',entity_id:'un2',created_at:daysAgo(5)},
+    {id:4,tenant_id:T,user_id:'u2',action:'insert',entity:'samples',entity_id:'s-D2-W47',created_at:daysAgo(3)}
   ];
   const rel={
     samples:r=>({...r, unit:DB.units.find(u=>u.id===r.unit_id)||null}),
+    production:r=>({...r, unit:DB.units.find(u=>u.id===r.unit_id)||null}),
     analyses:r=>({...r, parameter:DB.parameters.find(p=>p.id===r.parameter_id)||null,
                   sample:(()=>{const s=DB.samples.find(x=>x.id===r.sample_id); return s?{...s,unit:DB.units.find(u=>u.id===s.unit_id)||null}:null;})()}),
     audit_log:r=>({...r, actor:DB.profiles.find(p=>p.id===r.user_id)||null})
@@ -298,20 +308,14 @@
       then:(res,rej)=>Promise.resolve(run(st)).then(res,rej) };
     return api;
   }
-  const demoUser={id:'demo-user',email:'demo@labportal.app'};
+  const demoUser={id:'demo-user',email:'demo@biogas.gr'};
   const client={ from:query,
-    auth:{
-      getSession:async()=>({data:{session:{user:demoUser}}}),
-      onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
-      signInWithPassword:async()=>({data:{user:demoUser},error:null}),
-      signUp:async()=>({data:{user:demoUser,session:{user:demoUser}},error:null}),
-      signOut:async()=>({error:null}),
-      resetPasswordForEmail:async()=>({data:{},error:null}),
-      signInWithOtp:async()=>({data:{},error:null}),
-      verifyOtp:async()=>({data:{user:demoUser},error:null}),
-      mfa:{ getAuthenticatorAssuranceLevel:async()=>({data:{currentLevel:'aal1',nextLevel:'aal1'}}),
-        listFactors:async()=>({data:{totp:[]}}),
-        enroll:async()=>({data:{id:'f1',totp:{qr_code:'<svg xmlns="http://www.w3.org/2000/svg" width="170" height="170"><rect width="170" height="170" fill="#e4efe3"/><text x="85" y="90" text-anchor="middle" font-size="14" fill="#2d6a49">DEMO QR</text></svg>',secret:'DEMO-SECRET-ABC123'}},error:null}),
+    auth:{ getSession:async()=>({data:{session:{user:demoUser}}}), onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
+      signInWithPassword:async()=>({data:{user:demoUser},error:null}), signUp:async()=>({data:{user:demoUser,session:{user:demoUser}},error:null}),
+      signOut:async()=>({error:null}), resetPasswordForEmail:async()=>({data:{},error:null}),
+      signInWithOtp:async()=>({data:{},error:null}), verifyOtp:async()=>({data:{user:demoUser},error:null}),
+      mfa:{ getAuthenticatorAssuranceLevel:async()=>({data:{currentLevel:'aal1',nextLevel:'aal1'}}), listFactors:async()=>({data:{totp:[]}}),
+        enroll:async()=>({data:{id:'f1',totp:{qr_code:'<svg xmlns="http://www.w3.org/2000/svg" width="170" height="170"><rect width="170" height="170" fill="#e4efe3"/><text x="85" y="90" text-anchor="middle" font-size="14" fill="#2d6a49">DEMO QR</text></svg>',secret:'DEMO-SECRET'}},error:null}),
         challenge:async()=>({data:{id:'c1'},error:null}), verify:async()=>({error:null}), unenroll:async()=>({error:null}) } },
     storage:{ from:()=>({ upload:async()=>({error:null}), createSignedUrl:async()=>({data:{signedUrl:'about:blank'},error:null}), remove:async()=>({error:null}) }) }
   };
@@ -366,7 +370,8 @@ function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show"
 function show(id){["setup","login","app"].forEach(v=>$("#"+v).classList.toggle("hidden",v!==id));}
 function setMsg(where,type,text){const c=$(where);c.innerHTML=text?`<div class="msg ${type}">${esc(text)}</div>`:"";}
 
-const SAMPLE_KIND = {leaf:"Φύλλο",soil:"Έδαφος",water:"Νερό",reservoir:"Λιμνοδεξαμενή",fruit:"Καρπός",substrate:"Υπόστρωμα",other:"Άλλο"};
+const SAMPLE_KIND = {digester:"Χωνευτής",substrate_in:"Υπόστρωμα/Τροφοδοσία",biogas:"Βιοαέριο",digestate:"Χώνευμα (digestate)",influent:"Εισροή",effluent:"Εκροή",water:"Νερό",other:"Άλλο",
+  leaf:"Φύλλο",soil:"Έδαφος",reservoir:"Λιμνοδεξαμενή",fruit:"Καρπός",substrate:"Υπόστρωμα"};
 const STATUS = {draft:"Πρόχειρο",received:"Παραλήφθηκε",analyzing:"Σε ανάλυση",done:"Ολοκληρώθηκε",archived:"Αρχείο"};
 
 /* classify a value against a parameter's ideal range */
@@ -484,6 +489,7 @@ function go(view){
   if(view==="dashboard") renderDashboard();
   else if(view==="samples") renderSamples();
   else if(view==="bulk") renderBulk();
+  else if(view==="production") renderProduction();
   else if(view==="reports") renderReports();
   else if(view==="units") renderUnits();
   else if(view==="params") renderParams();
@@ -900,11 +906,11 @@ function exportMonthlyXlsx(){
 /* ---- Full tenant backup (JSON) ---- */
 async function exportBackup(){
   toast("Δημιουργία backup…");
-  const tables=["units","parameters","samples","analyses","invoices","files","invitations","profiles"];
-  const out={ app:"LabPortal", exported_at:new Date().toISOString(), tenant_id:state.tenantId };
+  const tables=["units","parameters","samples","analyses","production","invoices","files","invitations","profiles"];
+  const out={ app:"BioGas Portal", exported_at:new Date().toISOString(), tenant_id:state.tenantId };
   for(const t of tables){ const { data } = await sb.from(t).select("*").eq("tenant_id",state.tenantId); out[t]=data||[]; }
   const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:`labportal_backup_${new Date().toISOString().slice(0,10)}.json`});
+  const a=el("a",{href:URL.createObjectURL(blob),download:`biogas_backup_${new Date().toISOString().slice(0,10)}.json`});
   document.body.append(a); a.click(); a.remove(); toast("Το backup κατέβηκε");
 }
 async function runReport(){
@@ -965,7 +971,7 @@ function exportXlsx(){
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state._report.summary), "Σύνοψη");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reportDetailRows()), "Αναλυτικά");
-  const name=`LabPortal_report_${state._report.from||"all"}_${state._report.to||""}.xlsx`;
+  const name=`BioGas_report_${state._report.from||"all"}_${state._report.to||""}.xlsx`;
   XLSX.writeFile(wb, name); toast("Excel κατέβηκε");
 }
 function exportCsv(){
@@ -975,7 +981,7 @@ function exportCsv(){
     const v=r[h]==null?"":String(r[h]); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
   }).join(","))].join("\n");
   const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:`LabPortal_report_${state._report.from||"all"}.csv`});
+  const a=el("a",{href:URL.createObjectURL(blob),download:`BioGas_report_${state._report.from||"all"}.csv`});
   document.body.append(a); a.click(); a.remove(); toast("CSV κατέβηκε");
 }
 
@@ -1006,12 +1012,18 @@ async function renderUnits(){
 function unitForm(u){
   const body=el("div");
   body.innerHTML=`
-    <div class="field"><label>Όνομα</label><input class="input" id="u-name" value="${esc(u?.name||"")}"></div>
+    <div class="field"><label>Όνομα μονάδας / χωνευτή</label><input class="input" id="u-name" value="${esc(u?.name||"")}"></div>
     <div class="field"><label>Τοποθεσία</label><input class="input" id="u-loc" value="${esc(u?.location||"")}"></div>
+    <div class="row">
+      <div class="field"><label>Ισχύς ΣΗΘ (kWel)</label><input class="input" id="u-kw" type="number" step="any" value="${u?.capacity_kw??""}"></div>
+      <div class="field"><label>Όγκος χωνευτή (m³)</label><input class="input" id="u-vol" type="number" step="any" value="${u?.digester_m3??""}"></div>
+    </div>
     <div class="field"><label>Σημειώσεις</label><textarea class="input" id="u-notes" rows="2">${esc(u?.notes||"")}</textarea></div>`;
   modal(u?"Επεξεργασία μονάδας":"Νέα μονάδα", body, async close=>{
     const name=$("#u-name").value.trim(); if(!name)return toast("Το όνομα είναι υποχρεωτικό.");
-    const payload={name,location:$("#u-loc").value.trim()||null,notes:$("#u-notes").value.trim()||null};
+    const payload={name,location:$("#u-loc").value.trim()||null,notes:$("#u-notes").value.trim()||null,
+      capacity_kw:$("#u-kw").value!==""?Number($("#u-kw").value):null,
+      digester_m3:$("#u-vol").value!==""?Number($("#u-vol").value):null};
     const { error } = u
       ? await sb.from("units").update(payload).eq("id",u.id)
       : await sb.from("units").insert({...payload,tenant_id:state.tenantId});
@@ -1342,6 +1354,109 @@ async function renderSettings(){
   };
 }
 
+/* ============================ Production / operation log (biogas) ============================ */
+function fmtNum(n){ return n==null||n==="" ? "—" : Number(n).toLocaleString("el-GR",{maximumFractionDigits:1}); }
+async function renderProduction(){
+  const main=$("#main");
+  const defM=new Date().toISOString().slice(0,7);
+  main.innerHTML=`<div class="page-head">
+      <div><h1 class="page-title">Παραγωγή</h1><div class="sub">Ημερήσιο log λειτουργίας & δείκτες απόδοσης (KPIs)</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-end">
+        <div class="field" style="margin:0"><label>Μήνας</label><input class="input" id="pr-month" type="month" value="${defM}"></div>
+        <div class="field" style="margin:0"><label>Μονάδα</label><select class="input" id="pr-unit"><option value="">Όλες</option></select></div>
+        <button class="btn" id="pr-xlsx">⤓ Excel</button>
+        ${canWrite()?`<button class="btn primary" id="pr-new">＋ Εγγραφή</button>`:""}
+      </div></div>
+    <div class="stats" id="pr-stats"></div>
+    <div class="panel"><div class="body" id="pr-body"><div class="empty">Φόρτωση…</div></div></div>`;
+  const pu=$("#pr-unit"); state.units.forEach(u=>pu.append(el("option",{value:u.id},u.name)));
+  $("#pr-month").onchange=loadProduction; $("#pr-unit").onchange=loadProduction;
+  $("#pr-xlsx").onclick=exportProductionXlsx;
+  if(canWrite()) $("#pr-new").onclick=()=>productionForm();
+  loadProduction();
+}
+async function loadProduction(){
+  const m=$("#pr-month").value||new Date().toISOString().slice(0,7), unit=$("#pr-unit").value;
+  const [y,mo]=m.split("-").map(Number);
+  const from=new Date(Date.UTC(y,mo-1,1)).toISOString().slice(0,10);
+  const to=new Date(Date.UTC(y,mo,1)).toISOString().slice(0,10);
+  let q=sb.from("production").select("*,unit:units(name)").eq("tenant_id",state.tenantId)
+    .gte("log_date",from).lt("log_date",to).order("log_date",{ascending:false}).limit(1000);
+  if(unit) q=q.eq("unit_id",unit);
+  const { data, error }=await q;
+  const body=$("#pr-body");
+  if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  const rows=data||[]; state._prod={rows,month:m};
+  const sum=(k)=>rows.reduce((s,r)=>s+(Number(r[k])||0),0);
+  const mwh=sum("kwh_el")/1000, feed=sum("feedstock_t"), gas=sum("biogas_m3");
+  const ch4r=rows.filter(r=>r.ch4_pct!=null);
+  const avgch4=ch4r.length?ch4r.reduce((s,r)=>s+Number(r.ch4_pct),0)/ch4r.length:null;
+  const chpAvail=rows.length?(sum("chp_hours")/(rows.length*24))*100:null;
+  const spec=feed>0?gas/feed:null;
+  $("#pr-stats").innerHTML=
+    statTile("Ηλ. ενέργεια", mwh.toFixed(1)+" MWh")+
+    statTile("Μ.Ο. CH₄", avgch4!=null?avgch4.toFixed(1)+"%":"—", (avgch4!=null&&avgch4<50)?"var(--high)":"var(--ink)")+
+    statTile("Διαθεσιμότητα ΣΗΘ", chpAvail!=null?Math.round(chpAvail)+"%":"—", (chpAvail!=null&&chpAvail<85)?"var(--warn)":"var(--ok)")+
+    statTile("Ειδική απόδοση", spec!=null?spec.toFixed(0)+" m³/t":"—")+
+    statTile("Τροφοδοσία", feed.toFixed(1)+" t");
+  body.innerHTML=rows.length? table(
+    ["Ημ/νία","Μονάδα","Τροφ. (t)","Βιοαέριο (m³)","CH₄ %","kWh el","Ώρες ΣΗΘ",""],
+    rows.map(r=>[fmtDate(r.log_date),esc(r.unit?.name||"—"),fmtNum(r.feedstock_t),fmtNum(r.biogas_m3),
+      r.ch4_pct!=null?`<span class="badge ${r.ch4_pct<50?'high':'ok'}">${r.ch4_pct}</span>`:"—",
+      fmtNum(r.kwh_el),fmtNum(r.chp_hours),
+      canWrite()?`<span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn ghost sm" data-edit="${r.id}">✎</button><button class="btn ghost sm danger" data-del="${r.id}">✕</button></span>`:""])
+  ) : `<div class="empty">Καμία εγγραφή για ${esc(m)}. ${canWrite()?"Πάτησε «Εγγραφή».":""}</div>`;
+  rows.forEach(r=>{
+    const e=$(`#pr-body [data-edit="${r.id}"]`); if(e) e.onclick=()=>productionForm(r);
+    const d=$(`#pr-body [data-del="${r.id}"]`); if(d) d.onclick=async()=>{
+      if(!confirm("Διαγραφή εγγραφής;"))return;
+      const{error}=await sb.from("production").delete().eq("id",r.id);
+      if(error)return toast("Σφάλμα: "+error.message); toast("Διαγράφηκε"); loadProduction();
+    };
+  });
+}
+function productionForm(r){
+  const body=el("div");
+  const uopts=state.units.map(u=>`<option value="${u.id}"${r&&r.unit_id===u.id?" selected":""}>${esc(u.name)}</option>`).join("")||`<option value="">— καμία μονάδα —</option>`;
+  body.innerHTML=`
+    <div class="row">
+      <div class="field"><label>Ημερομηνία</label><input class="input" id="prf-date" type="date" value="${r?.log_date||new Date().toISOString().slice(0,10)}"></div>
+      <div class="field"><label>Μονάδα</label><select class="input" id="prf-u">${uopts}</select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Τροφοδοσία (t)</label><input class="input" id="prf-feed" type="number" step="any" value="${r?.feedstock_t??""}"></div>
+      <div class="field"><label>Βιοαέριο (m³)</label><input class="input" id="prf-gas" type="number" step="any" value="${r?.biogas_m3??""}"></div>
+      <div class="field"><label>CH₄ (%)</label><input class="input" id="prf-ch4" type="number" step="any" value="${r?.ch4_pct??""}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>kWh ηλεκτρ.</label><input class="input" id="prf-el" type="number" step="any" value="${r?.kwh_el??""}"></div>
+      <div class="field"><label>kWh θερμ.</label><input class="input" id="prf-th" type="number" step="any" value="${r?.kwh_th??""}"></div>
+      <div class="field"><label>Ώρες ΣΗΘ</label><input class="input" id="prf-h" type="number" step="any" value="${r?.chp_hours??""}"></div>
+    </div>
+    <div class="field"><label>Σημειώσεις</label><textarea class="input" id="prf-notes" rows="2">${esc(r?.notes||"")}</textarea></div>`;
+  modal(r?"Επεξεργασία εγγραφής":"Νέα εγγραφή παραγωγής", body, async close=>{
+    const num=id=>{ const v=$(id).value; return v!==""?Number(v):null; };
+    const payload={log_date:$("#prf-date").value||null, unit_id:$("#prf-u").value||null,
+      feedstock_t:num("#prf-feed"),biogas_m3:num("#prf-gas"),ch4_pct:num("#prf-ch4"),
+      kwh_el:num("#prf-el"),kwh_th:num("#prf-th"),chp_hours:num("#prf-h"),notes:$("#prf-notes").value.trim()||null};
+    if(!payload.log_date) return toast("Συμπλήρωσε ημερομηνία.");
+    const { error } = r
+      ? await sb.from("production").update(payload).eq("id",r.id)
+      : await sb.from("production").insert({...payload,tenant_id:state.tenantId,created_by:state.profile.id});
+    if(error)return toast("Σφάλμα: "+error.message);
+    close(); toast(r?"Αποθηκεύτηκε":"Καταχωρήθηκε"); loadProduction();
+  });
+}
+function exportProductionXlsx(){
+  if(!state._prod||!state._prod.rows.length) return toast("Καμία εγγραφή για εξαγωγή.");
+  if(!window.XLSX) return toast("Το Excel library δεν φόρτωσε.");
+  const rows=state._prod.rows.map(r=>({Ημερομηνία:r.log_date,Μονάδα:r.unit?.name||"",
+    "Τροφοδοσία (t)":r.feedstock_t,"Βιοαέριο (m³)":r.biogas_m3,"CH4 %":r.ch4_pct,
+    "kWh el":r.kwh_el,"kWh th":r.kwh_th,"Ώρες ΣΗΘ":r.chp_hours,Σημειώσεις:r.notes||""}));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Παραγωγή");
+  XLSX.writeFile(wb,`Παραγωγή_${state._prod.month}.xlsx`); toast("Excel κατέβηκε");
+}
+
 /* ============================ helpers: table builder ============================ */
 function table(headers, rows, rowClicks){
   const thead=`<thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead>`;
@@ -1533,6 +1648,15 @@ const I18N = {
   "Επαναφορά κωδικού":"Password reset","Αποστολή":"Send","Αποστολή κωδικού":"Send code",
   "📅 Μηνιαία αναφορά":"📅 Monthly report","Μηνιαία αναφορά":"Monthly report","⤓ Backup (JSON)":"⤓ Backup (JSON)",
   "Μήνας":"Month","Εμφάνιση":"Show","🖨 Εκτύπωση":"🖨 Print","Δραστηριότητα":"Activity","Μον.":"Unit",
+  // biogas (phase 6)
+  "Παραγωγή":"Production","Ημερήσιο log λειτουργίας & δείκτες απόδοσης (KPIs)":"Daily operation log & KPIs",
+  "＋ Εγγραφή":"+ Entry","Νέα εγγραφή παραγωγής":"New production entry","Επεξεργασία εγγραφής":"Edit entry",
+  "Ηλ. ενέργεια":"Electricity","Μ.Ο. CH₄":"Avg CH₄","Διαθεσιμότητα ΣΗΘ":"CHP availability",
+  "Ειδική απόδοση":"Specific yield","Τροφοδοσία":"Feedstock","Τροφοδοσία (t)":"Feedstock (t)",
+  "Βιοαέριο (m³)":"Biogas (m³)","Ώρες ΣΗΘ":"CHP hours","kWh ηλεκτρ.":"kWh el","kWh θερμ.":"kWh th",
+  "Χωνευτής":"Digester","Υπόστρωμα/Τροφοδοσία":"Substrate/Feed","Βιοαέριο":"Biogas","Χώνευμα (digestate)":"Digestate",
+  "Εισροή":"Influent","Εκροή":"Effluent","Όνομα μονάδας / χωνευτή":"Plant / digester name",
+  "Ισχύς ΣΗΘ (kWel)":"CHP capacity (kWel)","Όγκος χωνευτή (m³)":"Digester volume (m³)",
 };
 let LANG = localStorage.getItem("lp-lang")||"el";
 function trFull(s){

@@ -29,7 +29,8 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   -- What kind of sample was taken (extend freely per your lab's scope).
   create type public.sample_kind as enum
-    ('leaf', 'soil', 'water', 'reservoir', 'fruit', 'substrate', 'other');
+    ('leaf', 'soil', 'water', 'reservoir', 'fruit', 'substrate', 'other',
+     'digester', 'substrate_in', 'digestate', 'biogas', 'influent', 'effluent');
 exception when duplicate_object then null; end $$;
 
 do $$ begin
@@ -67,14 +68,34 @@ create table if not exists public.profiles (
 -- 3. Domain tables (all tenant-scoped)
 -- ---------------------------------------------------------------------------
 
--- Production units / sites belonging to a tenant (π.χ. θερμοκήπια, μονάδες).
+-- Plants / digesters belonging to a tenant (a biogas μονάδα / χωνευτής).
 create table if not exists public.units (
   id          uuid primary key default gen_random_uuid(),
   tenant_id   uuid not null references public.tenants (id) on delete cascade,
   name        text not null,
   location    text,
   notes       text,
+  capacity_kw numeric,                          -- CHP electrical capacity (kWel)
+  digester_m3 numeric,                          -- active digester volume (m³)
   created_at  timestamptz not null default now()
+);
+
+-- Daily production / operation log per plant (biogas edition).
+create table if not exists public.production (
+  id           uuid primary key default gen_random_uuid(),
+  tenant_id    uuid not null references public.tenants (id) on delete cascade,
+  unit_id      uuid references public.units (id) on delete set null,
+  log_date     date not null,
+  feedstock_t  numeric,
+  biogas_m3    numeric,
+  ch4_pct      numeric,
+  kwh_el       numeric,
+  kwh_th       numeric,
+  chp_hours    numeric,
+  flare_hours  numeric,
+  notes        text,
+  created_by   uuid references public.profiles (id) on delete set null,
+  created_at   timestamptz not null default now()
 );
 
 -- Catalogue of measurable parameters, with optional ideal range.
@@ -191,6 +212,9 @@ create index if not exists idx_invoices_tenant     on public.invoices (tenant_id
 create index if not exists idx_audit_tenant        on public.audit_log (tenant_id);
 create index if not exists idx_invitations_email   on public.invitations (lower(email));
 create index if not exists idx_invitations_tenant  on public.invitations (tenant_id);
+create index if not exists idx_production_tenant    on public.production (tenant_id);
+create index if not exists idx_production_unit       on public.production (unit_id);
+create index if not exists idx_production_date       on public.production (log_date);
 
 -- ---------------------------------------------------------------------------
 -- 5. Helper functions (SECURITY DEFINER to avoid RLS recursion on profiles)
@@ -269,7 +293,7 @@ $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['units','parameters','samples','analyses','invoices','profiles','files']
+  foreach t in array array['units','parameters','samples','analyses','invoices','profiles','files','production']
   loop
     execute format('drop trigger if exists audit_%1$s on public.%1$s', t);
     execute format('create trigger audit_%1$s after insert or update or delete on public.%1$s
@@ -288,6 +312,7 @@ alter table public.samples     enable row level security;
 alter table public.analyses    enable row level security;
 alter table public.files       enable row level security;
 alter table public.invitations enable row level security;
+alter table public.production  enable row level security;
 alter table public.invoices    enable row level security;
 alter table public.audit_log   enable row level security;
 
@@ -396,6 +421,15 @@ create policy audit_insert on public.audit_log for insert
   with check (public.is_platform_admin() or tenant_id = public.auth_tenant_id());
 
 -- invitations (platform admin, or the tenant's own admin, manage them)
+-- production (read within tenant; write for admin/operator)
+drop policy if exists production_select on public.production;
+create policy production_select on public.production for select
+  using (public.is_platform_admin() or tenant_id = public.auth_tenant_id());
+drop policy if exists production_write on public.production;
+create policy production_write on public.production for all
+  using (public.is_platform_admin() or (tenant_id = public.auth_tenant_id() and public.can_write()))
+  with check (public.is_platform_admin() or (tenant_id = public.auth_tenant_id() and public.can_write()));
+
 drop policy if exists invitations_rw on public.invitations;
 create policy invitations_rw on public.invitations for all
   using (public.is_platform_admin() or (tenant_id = public.auth_tenant_id() and public.auth_role() = 'admin'))
