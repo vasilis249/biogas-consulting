@@ -59,6 +59,7 @@ create table if not exists public.profiles (
   email              text,
   role               public.user_role not null default 'viewer',
   is_platform_admin  boolean not null default false,
+  last_seen          timestamptz,
   created_at         timestamptz not null default now()
 );
 
@@ -251,6 +252,11 @@ create or replace function public.audit_trigger()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare v_tenant uuid; v_id uuid;
 begin
+  if (tg_op = 'UPDATE' and tg_table_name = 'profiles') then
+    if (to_jsonb(new) - 'last_seen') = (to_jsonb(old) - 'last_seen') then
+      return new;   -- heartbeat-only update → do not log
+    end if;
+  end if;
   if (tg_op = 'DELETE') then v_tenant := old.tenant_id; v_id := old.id;
   else                       v_tenant := new.tenant_id; v_id := new.id; end if;
   insert into public.audit_log (tenant_id, user_id, action, entity, entity_id, meta)

@@ -80,7 +80,11 @@ tenant ──< units ──< samples ──< analyses >── parameters
 - **Φάση 2:** Reports + Excel/CSV export ✅ · διαχείριση παραμέτρων & μονάδων ✅ (αρχεία/Storage: εκκρεμεί)
 - **Φάση 3:** διαχείριση χρηστών & προσκλήσεις ✅ · MFA/TOTP ✅ · audit log UI ✅
 - **Φάση 4:** αρχεία/φωτό ανά δείγμα (Supabase Storage) ✅ · Οικονομικά UI (τιμολόγια) ✅ · branding ανά πελάτη (χρώμα/όνομα) ✅ · **EL/EN toggle: εκκρεμεί** (ξεχωριστό i18n pass)
+- **Φάση 5:** forgot-password + email-OTP login ✅ · presence/«online» χρήστες (`last_seen`) ✅ · Backup/Export (JSON) ✅ · Μηνιαία αναφορά (ΥΠΕΝ-style, Excel+εκτύπωση) ✅
 - **Μελλοντικά:** email προσκλήσεων (Edge Function), ειδοποιήσεις, πλήρες EL/EN.
+
+### Migrations (συνέχεια)
+- `0005_phase5.sql`: `profiles.last_seen` + audit guard (τα heartbeats δεν καταγράφονται).
 
 ### Storage (Φάση 4)
 Αρχεία ανά δείγμα σε private bucket `attachments`. Path: `<tenant_id>/<sample_id>/<ts>_<file>`.
