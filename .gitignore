@@ -1,0 +1,11 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Local env / secrets (never commit Supabase keys)
+.env
+.env.*
+config.local.js

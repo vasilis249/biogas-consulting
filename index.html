@@ -1,0 +1,1331 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LabPortal — Αναλύσεις</title>
+<style>
+  :root{
+    --bg:#f6f5f0; --surface:#ffffff; --surface-2:#faf9f5;
+    --ink:#1e2a24; --muted:#6c766f; --faint:#9aa39c;
+    --primary:#2f7d5b; --primary-ink:#ffffff; --primary-soft:#e6f1ea;
+    --border:#e7e3d8; --shadow:0 1px 2px rgba(20,30,25,.06),0 6px 18px rgba(20,30,25,.05);
+    --ok:#2f7d5b; --low:#2563c0; --high:#c0392b; --warn:#c77f12;
+    --radius:12px; --r-sm:8px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:15px}
+  a{color:var(--primary)}
+  .hidden{display:none !important}
+
+  /* ---------- buttons / fields ---------- */
+  .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--surface);
+       color:var(--ink);padding:9px 14px;border-radius:var(--r-sm);font-weight:600;font-size:14px;transition:.12s}
+  .btn:hover{border-color:#cfc9ba;background:var(--surface-2)}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+  .btn.primary:hover{background:#28694c}
+  .btn.ghost{border-color:transparent;background:transparent}
+  .btn.sm{padding:6px 10px;font-size:13px}
+  .btn.danger{color:var(--high);border-color:#ecc9c4}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+  .field label{font-size:13px;font-weight:600;color:var(--muted)}
+  .input,select.input,textarea.input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);
+       background:var(--surface);color:var(--ink);outline:none}
+  .input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row>*{flex:1;min-width:140px}
+
+  /* ---------- auth / setup screens ---------- */
+  .center-wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .auth-card{width:100%;max-width:400px;padding:30px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.3px}
+  .brand .dot{width:26px;height:26px;border-radius:8px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:15px}
+  .muted{color:var(--muted)}.small{font-size:13px}
+  .msg{padding:10px 12px;border-radius:var(--r-sm);font-size:13.5px;margin-bottom:12px}
+  .msg.err{background:#fcebe8;color:#9b2d1f;border:1px solid #f1cfc8}
+  .msg.ok{background:var(--primary-soft);color:#1f5c42;border:1px solid #c7e3d4}
+
+  /* ---------- app shell ---------- */
+  #app{display:grid;grid-template-columns:230px 1fr;grid-template-rows:auto 1fr;min-height:100%;
+       grid-template-areas:"side top" "side main"}
+  .topbar{grid-area:top;display:flex;align-items:center;justify-content:space-between;gap:12px;
+          padding:12px 22px;background:var(--surface);border-bottom:1px solid var(--border)}
+  .sidebar{grid-area:side;background:var(--surface);border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:4px}
+  .main{grid-area:main;padding:22px;overflow:auto}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);color:var(--ink);
+            font-weight:600;font-size:14px;border:none;background:none;width:100%;text-align:left}
+  .nav-item:hover{background:var(--surface-2)}
+  .nav-item.active{background:var(--primary-soft);color:#1f5c42}
+  .nav-item .ic{width:18px;text-align:center}
+  .nav-sep{height:1px;background:var(--border);margin:8px 4px}
+  .spacer{flex:1}
+  .who{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+  .who .role{font-size:12px;color:var(--faint);text-transform:capitalize}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;background:var(--surface-2);border:1px solid var(--border);color:var(--muted)}
+
+  /* ---------- content blocks ---------- */
+  .page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  h1.page-title{font-size:21px;margin:0;letter-spacing:-.3px}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:2px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+  .stat .k{font-size:12.5px;color:var(--muted);font-weight:600}
+  .stat .v{font-size:28px;font-weight:800;letter-spacing:-1px;margin-top:4px}
+  .stat .v small{font-size:14px;font-weight:600;color:var(--faint)}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .panel h3{margin:0;padding:14px 18px;border-bottom:1px solid var(--border);font-size:15px}
+  .panel .body{padding:4px 0}
+
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:11px 18px;font-size:14px;border-bottom:1px solid var(--border)}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);font-weight:700;background:var(--surface-2)}
+  tr:last-child td{border-bottom:none}
+  tbody tr{cursor:default}
+  tbody tr.clickable:hover{background:var(--surface-2);cursor:pointer}
+  .empty{padding:34px;text-align:center;color:var(--muted)}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700}
+  .badge.ok{background:#e6f1ea;color:#1f5c42}
+  .badge.low{background:#e4edfb;color:#1d4e9e}
+  .badge.high{background:#fbe6e2;color:#9b2d1f}
+  .badge.st{background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+  .dot-s{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+  /* ---------- modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(20,28,24,.42);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .modal{width:100%;max-width:540px;max-height:90vh;overflow:auto}
+  .modal .head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+  .modal .head h3{margin:0;font-size:17px}
+  .modal .pad{padding:20px}
+  .modal .foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--border);background:var(--surface-2)}
+
+  .grid-entry th,.grid-entry td{padding:8px 12px}
+  .grid-entry input{width:100%}
+  .ideal{font-size:12px;color:var(--faint)}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e2a24;color:#fff;
+         padding:11px 18px;border-radius:10px;font-size:14px;box-shadow:var(--shadow);z-index:80;opacity:0;transition:.2s}
+  .toast.show{opacity:1}
+
+  @media (max-width:820px){
+    #app{grid-template-columns:1fr;grid-template-areas:"top" "main";}
+    .sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;z-index:40;transform:translateX(-105%);transition:.2s;box-shadow:var(--shadow)}
+    .sidebar.open{transform:none}
+    .menu-btn{display:inline-flex !important}
+    .scrim{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:39}
+  }
+  .menu-btn{display:none}
+</style>
+</head>
+<body>
+
+<!-- ============================ SETUP (Supabase keys) ============================ -->
+<div id="setup" class="center-wrap hidden">
+  <div class="auth-card card">
+    <div class="brand" style="margin-bottom:6px"><span class="dot">◉</span> LabPortal</div>
+    <p class="muted small">Σύνδεσε το Supabase project σου. Το <b>anon key</b> είναι δημόσιο — αποθηκεύεται τοπικά στον browser.</p>
+    <div id="setup-msg"></div>
+    <div class="field"><label>Supabase URL</label><input id="su-url" class="input" placeholder="https://xxxx.supabase.co"></div>
+    <div class="field"><label>Supabase anon key</label><input id="su-key" class="input" placeholder="eyJ..."></div>
+    <button class="btn primary" style="width:100%" id="su-save">Αποθήκευση & σύνδεση</button>
+  </div>
+</div>
+
+<!-- ============================ LOGIN ============================ -->
+<div id="login" class="center-wrap hidden">
+  <div class="auth-card card">
+    <div class="brand" style="margin-bottom:4px"><span class="dot">◉</span> LabPortal</div>
+    <p class="muted small" style="margin-top:4px">Πλατφόρμα εργαστηριακών αναλύσεων</p>
+    <div id="login-msg"></div>
+    <form id="login-form">
+      <div class="field"><label>Email</label><input id="li-email" class="input" type="email" autocomplete="username" required></div>
+      <div class="field"><label>Κωδικός</label><input id="li-pass" class="input" type="password" autocomplete="current-password" required></div>
+      <button class="btn primary" style="width:100%" type="submit" id="li-submit">Είσοδος</button>
+    </form>
+    <div style="text-align:center;margin-top:12px">
+      <button class="btn ghost small" id="li-mode">Δεν έχεις λογαριασμό; Εγγραφή</button>
+    </div>
+    <div style="text-align:center;margin-top:4px;border-top:1px solid var(--border);padding-top:10px">
+      <button class="btn ghost small" id="li-reconf">Αλλαγή Supabase ρυθμίσεων</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ APP ============================ -->
+<div id="app" class="hidden">
+  <div class="scrim hidden" id="scrim"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand" style="font-size:18px;margin:4px 6px 16px"><span class="dot">◉</span> LabPortal</div>
+    <button class="nav-item active" data-view="dashboard"><span class="ic">▣</span> Επισκόπηση</button>
+    <button class="nav-item" data-view="samples"><span class="ic">🧪</span> Δείγματα</button>
+    <button class="nav-item" data-view="bulk"><span class="ic">⊞</span> Μαζική καταχώρηση</button>
+    <button class="nav-item" data-view="reports"><span class="ic">📊</span> Reports</button>
+    <div class="nav-sep"></div>
+    <div class="small muted" style="padding:4px 12px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.05em">Διαχείριση</div>
+    <button class="nav-item" data-view="units"><span class="ic">🏭</span> Μονάδες</button>
+    <button class="nav-item" data-view="params"><span class="ic">⚙</span> Παράμετροι</button>
+    <button class="nav-item nav-admin" data-view="finance"><span class="ic">€</span> Οικονομικά</button>
+    <button class="nav-item nav-admin" data-view="users"><span class="ic">👥</span> Χρήστες</button>
+    <button class="nav-item nav-admin" data-view="audit"><span class="ic">🗂</span> Αρχείο ενεργειών</button>
+    <button class="nav-item nav-platform" data-view="settings"><span class="ic">🎨</span> Ρυθμίσεις πελάτη</button>
+    <button class="nav-item" data-view="security"><span class="ic">🔒</span> Ασφάλεια</button>
+    <div class="spacer"></div>
+    <div class="nav-sep"></div>
+    <button class="nav-item" id="nav-logout"><span class="ic">⎋</span> Αποσύνδεση</button>
+  </aside>
+
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="btn ghost menu-btn" id="menu-btn" style="padding:6px 10px">☰</button>
+      <div>
+        <div id="tenant-area"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <button class="btn ghost sm" id="lang-toggle" title="Language" style="font-weight:700">EN</button>
+      <div class="who">
+        <span id="who-email" style="font-weight:600;font-size:13.5px"></span>
+        <span class="role" id="who-role"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main" id="main"></main>
+</div>
+
+<div id="modal-root"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+/* ============================================================================
+   LabPortal — single-file client (vanilla JS + Supabase)
+   Original work. Tenant isolation is enforced by Postgres RLS (see db/schema.sql);
+   this client just reads/writes and the DB decides what each user may touch.
+   ========================================================================== */
+
+/* ---- Config: hardcode here, or leave blank and use the setup screen ---- */
+const HARDCODED_URL = "";
+const HARDCODED_KEY = "";
+
+const CFG = {
+  url: HARDCODED_URL || localStorage.getItem("lp-url") || "",
+  key: HARDCODED_KEY || localStorage.getItem("lp-key") || "",
+};
+
+let sb = null;                                   // supabase client
+const state = {
+  user: null, profile: null,
+  tenants: [], tenantId: null,                   // active tenant (platform admin can switch)
+  params: [], units: [],
+  view: "dashboard",
+  sample: null,                                  // currently opened sample (detail)
+};
+
+/* ---------- tiny DOM helpers ---------- */
+const $ = (s, r=document)=>r.querySelector(s);
+const $$ = (s, r=document)=>[...r.querySelectorAll(s)];
+const el = (tag, props={}, ...kids)=>{
+  const n=document.createElement(tag);
+  for(const[k,v] of Object.entries(props)){
+    if(k==="class")n.className=v;
+    else if(k==="html")n.innerHTML=v;
+    else if(k.startsWith("on")&&typeof v==="function")n.addEventListener(k.slice(2),v);
+    else if(v!=null)n.setAttribute(k,v);
+  }
+  for(const kid of kids.flat()){ if(kid!=null) n.append(kid.nodeType?kid:document.createTextNode(kid)); }
+  return n;
+};
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtDate = d => d ? new Date(d).toLocaleDateString("el-GR") : "—";
+const monthStart = ()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1).toISOString();};
+let toastT;
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600);}
+function show(id){["setup","login","app"].forEach(v=>$("#"+v).classList.toggle("hidden",v!==id));}
+function setMsg(where,type,text){const c=$(where);c.innerHTML=text?`<div class="msg ${type}">${esc(text)}</div>`:"";}
+
+const SAMPLE_KIND = {leaf:"Φύλλο",soil:"Έδαφος",water:"Νερό",reservoir:"Λιμνοδεξαμενή",fruit:"Καρπός",substrate:"Υπόστρωμα",other:"Άλλο"};
+const STATUS = {draft:"Πρόχειρο",received:"Παραλήφθηκε",analyzing:"Σε ανάλυση",done:"Ολοκληρώθηκε",archived:"Αρχείο"};
+
+/* classify a value against a parameter's ideal range */
+function rangeOf(val, p){
+  if(val==null||p==null) return "na";
+  if(p.ideal_min!=null && val<p.ideal_min) return "low";
+  if(p.ideal_max!=null && val>p.ideal_max) return "high";
+  return "ok";
+}
+function rangeBadge(st){
+  if(st==="low")  return `<span class="badge low">▼ χαμηλό</span>`;
+  if(st==="high") return `<span class="badge high">▲ υψηλό</span>`;
+  if(st==="ok")   return `<span class="badge ok">✓ ιδανικό</span>`;
+  return `<span class="badge st">—</span>`;
+}
+
+/* ============================ boot ============================ */
+function initClient(){
+  if(!CFG.url || !CFG.key) return false;
+  sb = supabase.createClient(CFG.url, CFG.key, {auth:{persistSession:true,autoRefreshToken:true}});
+  return true;
+}
+
+async function boot(){
+  if(!initClient()){ show("setup"); return; }
+  const { data:{ session } } = await sb.auth.getSession();
+  sb.auth.onAuthStateChange((_e, s)=>{ if(!s) { state.user=null; show("login"); } });
+  if(session){ await afterAuth(session.user); }
+  else show("login");
+}
+
+async function onLoggedIn(user){
+  state.user = user;
+  // load my profile
+  const { data:prof, error } = await sb.from("profiles").select("*").eq("id", user.id).single();
+  if(error){ setMsg("#login-msg","err","Σφάλμα φόρτωσης προφίλ: "+error.message); show("login"); return; }
+  state.profile = prof;
+
+  // resolve tenant(s)
+  if(prof.is_platform_admin){
+    const { data:ts } = await sb.from("tenants").select("id,name,slug,settings").order("name");
+    state.tenants = ts||[];
+    state.tenantId = (state.tenants[0]||{}).id || null;
+  } else {
+    state.tenantId = prof.tenant_id || null;
+    if(prof.tenant_id){
+      const { data:t } = await sb.from("tenants").select("id,name,slug,settings").eq("id",prof.tenant_id).maybeSingle();
+      state.tenants = t?[t]:[];
+    }
+  }
+
+  $("#who-email").textContent = user.email || prof.full_name || "—";
+  $("#who-role").textContent = prof.is_platform_admin ? "platform admin" : (prof.role||"");
+  $$(".nav-admin").forEach(b=>b.classList.toggle("hidden", !isAdmin()));
+  $$(".nav-platform").forEach(b=>b.classList.toggle("hidden", !state.profile.is_platform_admin));
+  applyBranding();
+  renderTenantArea();
+  show("app");
+  await loadRefData();
+  go("dashboard");
+}
+
+function renderTenantArea(){
+  const area = $("#tenant-area"); area.innerHTML="";
+  if(state.profile.is_platform_admin){
+    if(!state.tenants.length){
+      area.append(el("button",{class:"btn sm primary",onclick:createTenant},"＋ Δημιουργία πρώτου πελάτη"));
+      return;
+    }
+    const sel = el("select",{class:"input",style:"padding:6px 10px;max-width:260px",onchange:async e=>{
+      state.tenantId=e.target.value; await loadRefData(); go(state.view);
+    }});
+    state.tenants.forEach(t=>sel.append(el("option",{value:t.id, ...(t.id===state.tenantId?{selected:"selected"}:{})},t.name)));
+    area.append(el("div",{style:"display:flex;align-items:center;gap:8px"},
+      el("span",{class:"small muted"},"Πελάτης:"), sel,
+      el("button",{class:"btn sm ghost",title:"Νέος πελάτης",onclick:createTenant},"＋")));
+  } else {
+    const t = state.tenants[0];
+    area.append(el("div",{class:"pill"}, t? t.name : "Χωρίς αντιστοιχισμένο πελάτη"));
+  }
+}
+
+/* load parameters + units for the active tenant */
+async function loadRefData(){
+  state.params=[]; state.units=[];
+  if(!state.tenantId){ return; }
+  const { data:params } = await sb.from("parameters")
+    .select("*").or(`tenant_id.is.null,tenant_id.eq.${state.tenantId}`).order("sort_order");
+  // de-dup by code: a tenant-specific param overrides a global one
+  const byCode={}; (params||[]).forEach(p=>{ if(!byCode[p.code]||p.tenant_id) byCode[p.code]=p; });
+  state.params = Object.values(byCode).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  const { data:units } = await sb.from("units").select("*").eq("tenant_id",state.tenantId).order("name");
+  state.units = units||[];
+}
+
+/* ============================ navigation ============================ */
+function go(view){
+  state.view=view; state.sample=null;
+  $$(".nav-item[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+  $("#sidebar").classList.remove("open"); $("#scrim").classList.add("hidden");
+  if(view==="security"){ renderSecurity(); return; }   // account-level, no tenant needed
+  if(!state.tenantId){ renderNoTenant(); return; }
+  if(view==="dashboard") renderDashboard();
+  else if(view==="samples") renderSamples();
+  else if(view==="bulk") renderBulk();
+  else if(view==="reports") renderReports();
+  else if(view==="units") renderUnits();
+  else if(view==="params") renderParams();
+  else if(view==="users") renderUsers();
+  else if(view==="audit") renderAudit();
+  else if(view==="finance") renderFinance();
+  else if(view==="settings") renderSettings();
+  else if(view==="security") renderSecurity();
+}
+
+function renderNoTenant(){
+  $("#main").innerHTML = `<div class="panel"><div class="empty">
+    ${state.profile.is_platform_admin
+      ? "Δημιούργησε έναν πελάτη από το πάνω μέρος για να ξεκινήσεις."
+      : "Ο λογαριασμός σου δεν έχει αντιστοιχιστεί σε πελάτη ακόμα. Επικοινώνησε με τον διαχειριστή."}
+  </div></div>`;
+}
+
+/* ============================ Dashboard ============================ */
+async function renderDashboard(){
+  const main=$("#main");
+  main.innerHTML = `<div class="page-head"><div>
+      <h1 class="page-title">Επισκόπηση</h1>
+      <div class="sub">Σύνοψη δραστηριότητας & τιμές εκτός ιδανικού εύρους</div>
+    </div></div>
+    <div class="stats" id="dash-stats"></div>
+    <div class="panel"><h3>Τιμές εκτός ιδανικού (πρόσφατες)</h3><div class="body" id="dash-out"></div></div>
+    <div style="height:16px"></div>
+    <div class="panel"><h3>Πρόσφατα δείγματα</h3><div class="body" id="dash-recent"></div></div>`;
+
+  const T = state.tenantId;
+  const [sTotal, sMonth, uCount, recent, analyses] = await Promise.all([
+    sb.from("samples").select("id",{count:"exact",head:true}).eq("tenant_id",T),
+    sb.from("samples").select("id",{count:"exact",head:true}).eq("tenant_id",T).gte("created_at",monthStart()),
+    sb.from("units").select("id",{count:"exact",head:true}).eq("tenant_id",T),
+    sb.from("samples").select("id,code,kind,status,taken_at,created_at,unit:units(name)").eq("tenant_id",T).order("created_at",{ascending:false}).limit(8),
+    sb.from("analyses").select("value,unit,created_at,parameter:parameters(code,label_el,ideal_min,ideal_max),sample:samples(code,unit:units(name))").eq("tenant_id",T).order("created_at",{ascending:false}).limit(400),
+  ]);
+
+  const out = (analyses.data||[]).map(a=>({a,st:rangeOf(a.value,a.parameter)})).filter(x=>x.st==="low"||x.st==="high");
+  $("#dash-stats").innerHTML = `
+    ${statTile("Σύνολο δειγμάτων", sTotal.count??0)}
+    ${statTile("Δείγματα τον μήνα", sMonth.count??0)}
+    ${statTile("Μονάδες", uCount.count??0)}
+    ${statTile("Εκτός ιδανικού", out.length, out.length?'var(--high)':'var(--ink)')}`;
+
+  $("#dash-out").innerHTML = out.length ? table(
+    ["Μονάδα","Δείγμα","Παράμετρος","Τιμή","Κατάσταση"],
+    out.slice(0,12).map(({a,st})=>[
+      esc(a.sample?.unit?.name||"—"), esc(a.sample?.code||"—"),
+      esc(a.parameter?.label_el||a.parameter?.code||"—"),
+      `${esc(a.value)} ${esc(a.unit||"")}`, rangeBadge(st)
+    ])) : `<div class="empty">Καμία τιμή εκτός ιδανικού εύρους 🎉</div>`;
+
+  $("#dash-recent").innerHTML = (recent.data||[]).length ? table(
+    ["Δείγμα","Μονάδα","Τύπος","Κατάσταση","Ημ/νία δειγμ."],
+    recent.data.map(s=>[esc(s.code||"—"),esc(s.unit?.name||"—"),SAMPLE_KIND[s.kind]||s.kind,
+      `<span class="badge st">${STATUS[s.status]||s.status}</span>`,fmtDate(s.taken_at)]),
+    recent.data.map(s=>()=>openSample(s.id))
+  ) : `<div class="empty">Δεν υπάρχουν δείγματα ακόμα.</div>`;
+}
+function statTile(k,v,color){return `<div class="stat"><div class="k">${esc(k)}</div><div class="v" style="color:${color||'var(--ink)'}">${esc(v)}</div></div>`;}
+
+/* ============================ Samples list ============================ */
+async function renderSamples(){
+  const main=$("#main");
+  main.innerHTML = `<div class="page-head">
+      <div><h1 class="page-title">Δείγματα</h1><div class="sub">Λίστα & διαχείριση δειγμάτων</div></div>
+      <div style="display:flex;gap:10px">
+        <select class="input" id="f-unit" style="max-width:180px"><option value="">Όλες οι μονάδες</option></select>
+        <select class="input" id="f-kind" style="max-width:150px"><option value="">Όλοι οι τύποι</option></select>
+        ${canWrite()?`<button class="btn primary" id="btn-new-sample">＋ Νέο δείγμα</button>`:""}
+      </div></div>
+    <div class="panel"><div class="body" id="samples-body"><div class="empty">Φόρτωση…</div></div></div>`;
+
+  const fu=$("#f-unit"); state.units.forEach(u=>fu.append(el("option",{value:u.id},u.name)));
+  const fk=$("#f-kind"); Object.entries(SAMPLE_KIND).forEach(([k,v])=>fk.append(el("option",{value:k},v)));
+  fu.onchange=fk.onchange=loadSamples;
+  if(canWrite()) $("#btn-new-sample").onclick=()=>sampleForm();
+  loadSamples();
+}
+async function loadSamples(){
+  let q = sb.from("samples").select("id,code,kind,status,taken_at,created_at,notes,unit:units(name)")
+    .eq("tenant_id",state.tenantId).order("created_at",{ascending:false}).limit(200);
+  const u=$("#f-unit")?.value, k=$("#f-kind")?.value;
+  if(u) q=q.eq("unit_id",u); if(k) q=q.eq("kind",k);
+  const { data, error } = await q;
+  const body=$("#samples-body");
+  if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  body.innerHTML = (data||[]).length ? table(
+    ["Δείγμα","Μονάδα","Τύπος","Κατάσταση","Ημ/νία"],
+    data.map(s=>[esc(s.code||"—"),esc(s.unit?.name||"—"),SAMPLE_KIND[s.kind]||s.kind,
+      `<span class="badge st">${STATUS[s.status]||s.status}</span>`,fmtDate(s.taken_at)]),
+    data.map(s=>()=>openSample(s.id))
+  ) : `<div class="empty">Κανένα δείγμα. ${canWrite()?"Πάτησε «Νέο δείγμα».":""}</div>`;
+}
+
+/* ============================ Sample detail ============================ */
+async function openSample(id){
+  const { data:s } = await sb.from("samples").select("*,unit:units(name)").eq("id",id).single();
+  if(!s) return;
+  state.sample=s;
+  const { data:an } = await sb.from("analyses")
+    .select("*,parameter:parameters(code,label_el,ideal_min,ideal_max,default_unit)")
+    .eq("sample_id",id).order("created_at");
+  const main=$("#main");
+  main.innerHTML = `<div class="page-head">
+      <div>
+        <button class="btn ghost sm" onclick="go(state.view==='dashboard'?'samples':state.view)">← Πίσω</button>
+        <h1 class="page-title" style="margin-top:8px">Δείγμα ${esc(s.code||"—")}</h1>
+        <div class="sub">${esc(s.unit?.name||"—")} · ${SAMPLE_KIND[s.kind]||s.kind} · ${fmtDate(s.taken_at)} · <span class="badge st">${STATUS[s.status]||s.status}</span></div>
+      </div>
+      ${canWrite()?`<button class="btn primary" id="btn-add-an">＋ Προσθήκη ανάλυσης</button>`:""}
+    </div>
+    ${s.notes?`<div class="panel" style="margin-bottom:16px"><div class="body" style="padding:14px 18px"><b class="small muted">Σημειώσεις:</b> ${esc(s.notes)}</div></div>`:""}
+    <div class="panel" style="margin-bottom:16px"><h3>Αναλύσεις</h3><div class="body" id="an-body"></div></div>
+    <div class="panel"><h3 style="display:flex;justify-content:space-between;align-items:center">
+        <span>Αρχεία & φωτογραφίες</span>
+        ${canWrite()?`<label class="btn sm primary" style="margin:-4px 0">＋ Μεταφόρτωση<input type="file" id="file-input" style="display:none"></label>`:""}
+      </h3><div class="body" id="files-body"><div class="empty">Φόρτωση…</div></div></div>`;
+  if(canWrite()) $("#btn-add-an").onclick=()=>analysisForm(s);
+  if(canWrite()) $("#file-input").onchange=e=>uploadFile(s, e.target.files[0]);
+  renderAnalyses(an||[]);
+  loadFiles(s);
+}
+
+/* ---- sample attachments (Supabase Storage: bucket "attachments") ---- */
+async function loadFiles(sample){
+  const body=$("#files-body"); if(!body) return;
+  const { data, error } = await sb.from("files").select("*").eq("sample_id",sample.id).order("created_at",{ascending:false});
+  if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  if(!(data||[]).length){ body.innerHTML=`<div class="empty">Κανένα αρχείο.</div>`; return; }
+  body.innerHTML=table(
+    ["Όνομα","Μέγεθος","Ημ/νία",""],
+    data.map(f=>[esc(f.filename||"—"), f.size_bytes?Math.round(f.size_bytes/1024)+" KB":"—", fmtDate(f.created_at),
+      `<span style="display:flex;gap:6px;justify-content:flex-end">
+        <button class="btn ghost sm" data-open="${f.id}">Άνοιγμα</button>
+        ${canWrite()?`<button class="btn ghost sm danger" data-delf="${f.id}">✕</button>`:""}</span>`])
+  );
+  (data||[]).forEach(f=>{
+    const o=$(`#files-body [data-open="${f.id}"]`); if(o) o.onclick=()=>openFile(f);
+    const d=$(`#files-body [data-delf="${f.id}"]`); if(d) d.onclick=()=>deleteFile(sample,f);
+  });
+}
+async function uploadFile(sample, file){
+  if(!file) return;
+  if(file.size>15*1024*1024) return toast("Το αρχείο ξεπερνά τα 15MB.");
+  const safe=file.name.replace(/[^\w.\-]+/g,"_");
+  const path=`${state.tenantId}/${sample.id}/${Date.now()}_${safe}`;
+  toast("Μεταφόρτωση…");
+  const { error:ue } = await sb.storage.from("attachments").upload(path, file, {contentType:file.type||undefined});
+  if(ue) return toast("Σφάλμα μεταφόρτωσης: "+ue.message);
+  const { error:ie } = await sb.from("files").insert({
+    tenant_id:state.tenantId, sample_id:sample.id, storage_path:path,
+    filename:file.name, mime:file.type||null, size_bytes:file.size, uploaded_by:state.profile.id
+  });
+  if(ie){ await sb.storage.from("attachments").remove([path]); return toast("Σφάλμα: "+ie.message); }
+  toast("Μεταφορτώθηκε"); loadFiles(sample);
+}
+async function openFile(f){
+  const { data, error } = await sb.storage.from("attachments").createSignedUrl(f.storage_path, 120);
+  if(error) return toast("Σφάλμα: "+error.message);
+  window.open(data.signedUrl, "_blank");
+}
+async function deleteFile(sample, f){
+  if(!confirm(`Διαγραφή «${f.filename}»;`)) return;
+  await sb.storage.from("attachments").remove([f.storage_path]);
+  const { error } = await sb.from("files").delete().eq("id",f.id);
+  if(error) return toast("Σφάλμα: "+error.message);
+  toast("Διαγράφηκε"); loadFiles(sample);
+}
+function renderAnalyses(an){
+  const body=$("#an-body");
+  if(!an.length){ body.innerHTML=`<div class="empty">Καμία ανάλυση ακόμα.</div>`; return; }
+  body.innerHTML = table(
+    ["Παράμετρος","Τιμή","Ιδανικό","Κατάσταση","Μέθοδος",""],
+    an.map(a=>{
+      const p=a.parameter||{}, st=rangeOf(a.value,p);
+      const ideal=(p.ideal_min!=null||p.ideal_max!=null)?`<span class="ideal">${p.ideal_min??"−∞"} – ${p.ideal_max??"+∞"}</span>`:"—";
+      return [esc(p.label_el||p.code||"—"), `<b>${esc(a.value)}</b> ${esc(a.unit||"")}`, ideal, rangeBadge(st), esc(a.method||"—"),
+        canWrite()?`<button class="btn ghost sm danger" data-del="${a.id}">✕</button>`:""];
+    })
+  );
+  $$("#an-body [data-del]").forEach(b=>b.onclick=async()=>{
+    if(!confirm("Διαγραφή ανάλυσης;"))return;
+    const {error}=await sb.from("analyses").delete().eq("id",b.dataset.del);
+    if(error)return toast("Σφάλμα: "+error.message);
+    toast("Διαγράφηκε"); openSample(state.sample.id);
+  });
+}
+
+/* ============================ Bulk entry ============================ */
+function renderBulk(){
+  if(!canWrite()){ $("#main").innerHTML=`<div class="panel"><div class="empty">Δεν έχεις δικαίωμα καταχώρησης (ρόλος: viewer).</div></div>`; return; }
+  const main=$("#main");
+  main.innerHTML = `<div class="page-head"><div>
+      <h1 class="page-title">Μαζική καταχώρηση</h1>
+      <div class="sub">Δημιούργησε δείγμα και καταχώρησε όλες τις μετρήσεις μαζί</div></div></div>
+    <div class="panel" style="margin-bottom:16px"><div class="body" style="padding:18px">
+      <div class="row">
+        <div class="field"><label>Μονάδα</label><select class="input" id="b-unit"></select></div>
+        <div class="field"><label>Κωδικός δείγματος</label><input class="input" id="b-code" placeholder="π.χ. L-2025-001"></div>
+        <div class="field"><label>Τύπος</label><select class="input" id="b-kind"></select></div>
+        <div class="field"><label>Ημ/νία δειγμ.</label><input class="input" id="b-date" type="date"></div>
+      </div>
+    </div></div>
+    <div class="panel"><h3>Μετρήσεις</h3><div class="body"><div id="b-grid"></div></div></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:16px">
+      <button class="btn primary" id="b-save">Αποθήκευση καταχώρησης</button></div>`;
+
+  const bu=$("#b-unit");
+  if(!state.units.length) bu.append(el("option",{value:""},"— καμία μονάδα —"));
+  state.units.forEach(u=>bu.append(el("option",{value:u.id},u.name)));
+  const bk=$("#b-kind"); Object.entries(SAMPLE_KIND).forEach(([k,v])=>bk.append(el("option",{value:k},v)));
+  $("#b-date").value = new Date().toISOString().slice(0,10);
+
+  if(!state.params.length){ $("#b-grid").innerHTML=`<div class="empty">Δεν υπάρχουν παράμετροι. Τρέξε το db/seed.sql.</div>`; }
+  else {
+    $("#b-grid").innerHTML = `<table class="grid-entry"><thead><tr><th>Παράμετρος</th><th style="width:140px">Τιμή</th><th style="width:120px">Μονάδα</th><th>Ιδανικό</th></tr></thead><tbody>${
+      state.params.map(p=>`<tr>
+        <td>${esc(p.label_el||p.code)}</td>
+        <td><input class="input" type="number" step="any" data-pid="${p.id}" data-unit="${esc(p.default_unit||"")}"></td>
+        <td><input class="input" data-unit-for="${p.id}" value="${esc(p.default_unit||"")}"></td>
+        <td class="ideal">${p.ideal_min??"−∞"} – ${p.ideal_max??"+∞"}</td>
+      </tr>`).join("")
+    }</tbody></table>`;
+  }
+  $("#b-save").onclick=saveBulk;
+}
+async function saveBulk(){
+  const unit=$("#b-unit").value||null, code=$("#b-code").value.trim()||null,
+        kind=$("#b-kind").value, date=$("#b-date").value||null;
+  const rows=$$("#b-grid input[data-pid]").map(inp=>({
+    pid:inp.dataset.pid, value:inp.value.trim(),
+    unit:($(`[data-unit-for="${inp.dataset.pid}"]`)?.value||inp.dataset.unit||"").trim()
+  })).filter(r=>r.value!=="");
+  if(!rows.length) return toast("Συμπλήρωσε τουλάχιστον μία τιμή.");
+  const btn=$("#b-save"); btn.disabled=true; btn.textContent="Αποθήκευση…";
+  const { data:s, error:e1 } = await sb.from("samples").insert({
+    tenant_id:state.tenantId, unit_id:unit, code, kind, status:"done", taken_at:date,
+    created_by:state.profile.id
+  }).select().single();
+  if(e1){ btn.disabled=false; btn.textContent="Αποθήκευση καταχώρησης"; return toast("Σφάλμα: "+e1.message); }
+  const payload=rows.map(r=>({tenant_id:state.tenantId,sample_id:s.id,parameter_id:r.pid,
+    value:Number(r.value),unit:r.unit||null,measured_at:new Date().toISOString(),created_by:state.profile.id}));
+  const { error:e2 } = await sb.from("analyses").insert(payload);
+  btn.disabled=false; btn.textContent="Αποθήκευση καταχώρησης";
+  if(e2) return toast("Το δείγμα αποθηκεύτηκε, αλλά οι μετρήσεις απέτυχαν: "+e2.message);
+  toast(`Αποθηκεύτηκαν ${rows.length} μετρήσεις`); openSample(s.id);
+}
+
+/* ============================ modals: forms ============================ */
+function modal(title, bodyNode, onSave, saveLabel="Αποθήκευση"){
+  const root=$("#modal-root");
+  const close=()=>root.innerHTML="";
+  const saveBtn=el("button",{class:"btn primary"},saveLabel);
+  const ov=el("div",{class:"overlay",onclick:e=>{if(e.target===ov)close();}},
+    el("div",{class:"modal card"},
+      el("div",{class:"head"}, el("h3",{},title), el("button",{class:"btn ghost sm",onclick:close},"✕")),
+      el("div",{class:"pad"}, bodyNode),
+      el("div",{class:"foot"}, el("button",{class:"btn",onclick:close},"Άκυρο"), saveBtn)));
+  saveBtn.onclick=async()=>{ saveBtn.disabled=true; try{ await onSave(close);}finally{saveBtn.disabled=false;} };
+  root.innerHTML=""; root.append(ov);
+}
+
+function sampleForm(){
+  const body=el("div");
+  const unitOpts = state.units.length
+    ? state.units.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join("")
+    : `<option value="">— καμία μονάδα —</option>`;
+  body.innerHTML = `
+    <div class="field"><label>Μονάδα</label><select class="input" id="s-unit">${unitOpts}</select></div>
+    <div class="row">
+      <div class="field"><label>Κωδικός</label><input class="input" id="s-code" placeholder="π.χ. L-2025-001"></div>
+      <div class="field"><label>Τύπος</label><select class="input" id="s-kind">${Object.entries(SAMPLE_KIND).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Ημ/νία δειγμ.</label><input class="input" id="s-date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="field"><label>Κατάσταση</label><select class="input" id="s-status">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}"${k==="received"?" selected":""}>${v}</option>`).join("")}</select></div>
+    </div>
+    <div class="field"><label>Σημειώσεις</label><textarea class="input" id="s-notes" rows="2"></textarea></div>`;
+  modal("Νέο δείγμα", body, async close=>{
+    const { data, error } = await sb.from("samples").insert({
+      tenant_id:state.tenantId, unit_id:$("#s-unit").value||null, code:$("#s-code").value.trim()||null,
+      kind:$("#s-kind").value, status:$("#s-status").value, taken_at:$("#s-date").value||null,
+      notes:$("#s-notes").value.trim()||null, created_by:state.profile.id
+    }).select().single();
+    if(error) return toast("Σφάλμα: "+error.message);
+    close(); toast("Το δείγμα δημιουργήθηκε"); openSample(data.id);
+  });
+}
+
+function analysisForm(sample){
+  const body=el("div");
+  body.innerHTML = `
+    <div class="field"><label>Παράμετρος</label><select class="input" id="a-param">${
+      state.params.map(p=>`<option value="${p.id}" data-unit="${esc(p.default_unit||"")}">${esc(p.label_el||p.code)}</option>`).join("")}</select></div>
+    <div class="row">
+      <div class="field"><label>Τιμή</label><input class="input" id="a-value" type="number" step="any"></div>
+      <div class="field"><label>Μονάδα</label><input class="input" id="a-unit" value="${esc(state.params[0]?.default_unit||"")}"></div>
+    </div>
+    <div class="field"><label>Μέθοδος (προαιρετικό)</label><input class="input" id="a-method"></div>`;
+  const psel=body.querySelector("#a-param");
+  psel.onchange=()=>{ body.querySelector("#a-unit").value=psel.selectedOptions[0].dataset.unit||""; };
+  modal("Προσθήκη ανάλυσης", body, async close=>{
+    const v=$("#a-value").value.trim(); if(v==="") return toast("Συμπλήρωσε τιμή.");
+    const { error } = await sb.from("analyses").insert({
+      tenant_id:state.tenantId, sample_id:sample.id, parameter_id:$("#a-param").value,
+      value:Number(v), unit:$("#a-unit").value.trim()||null, method:$("#a-method").value.trim()||null,
+      measured_at:new Date().toISOString(), created_by:state.profile.id
+    });
+    if(error) return toast("Σφάλμα: "+error.message);
+    close(); toast("Προστέθηκε"); openSample(sample.id);
+  });
+}
+
+function createTenant(){
+  const body=el("div");
+  body.innerHTML = `
+    <div class="field"><label>Όνομα πελάτη</label><input class="input" id="t-name" placeholder="π.χ. Αγρόκτημα Παπαδόπουλος"></div>
+    <div class="field"><label>Slug (μοναδικό)</label><input class="input" id="t-slug" placeholder="papadopoulos"></div>`;
+  body.querySelector("#t-name").addEventListener("input",e=>{
+    body.querySelector("#t-slug").value=e.target.value.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  });
+  modal("Νέος πελάτης", body, async close=>{
+    const name=$("#t-name").value.trim(), slug=$("#t-slug").value.trim();
+    if(!name||!slug) return toast("Συμπλήρωσε όνομα και slug.");
+    const { data, error } = await sb.from("tenants").insert({name,slug}).select().single();
+    if(error) return toast("Σφάλμα: "+error.message);
+    state.tenants.push(data); state.tenantId=data.id;
+    close(); toast("Ο πελάτης δημιουργήθηκε"); renderTenantArea(); await loadRefData(); go("dashboard");
+  },"Δημιουργία");
+}
+
+/* ============================ Reports + Excel export ============================ */
+function monthsAgoISO(n){ const d=new Date(); d.setMonth(d.getMonth()-n); return d.toISOString().slice(0,10); }
+function renderReports(){
+  const main=$("#main");
+  main.innerHTML = `<div class="page-head"><div>
+      <h1 class="page-title">Reports</h1><div class="sub">Σύνοψη μετρήσεων & εξαγωγή σε Excel</div></div></div>
+    <div class="panel" style="margin-bottom:16px"><div class="body" style="padding:18px">
+      <div class="row">
+        <div class="field"><label>Από</label><input class="input" id="r-from" type="date" value="${monthsAgoISO(3)}"></div>
+        <div class="field"><label>Έως</label><input class="input" id="r-to" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="field"><label>Μονάδα</label><select class="input" id="r-unit"><option value="">Όλες</option></select></div>
+        <div class="field" style="flex:0 0 auto;align-self:flex-end"><button class="btn primary" id="r-run">Υπολογισμός</button></div>
+      </div>
+    </div></div>
+    <div id="r-result"></div>`;
+  const ru=$("#r-unit"); state.units.forEach(u=>ru.append(el("option",{value:u.id},u.name)));
+  $("#r-run").onclick=runReport;
+  runReport();
+}
+async function runReport(){
+  const from=$("#r-from").value, to=$("#r-to").value, unit=$("#r-unit").value;
+  const res=$("#r-result"); res.innerHTML=`<div class="panel"><div class="empty">Υπολογισμός…</div></div>`;
+  let q = sb.from("analyses")
+    .select("value,unit,measured_at,created_at,parameter:parameters(code,label_el,ideal_min,ideal_max),sample:samples!inner(code,taken_at,unit_id,unit:units(name))")
+    .eq("tenant_id",state.tenantId).order("created_at",{ascending:false}).limit(5000);
+  if(from) q=q.gte("created_at",from);
+  if(to)   q=q.lte("created_at",to+"T23:59:59");
+  const { data, error } = await q;
+  if(error){ res.innerHTML=`<div class="panel"><div class="empty">Σφάλμα: ${esc(error.message)}</div></div>`; return; }
+  let rows=(data||[]);
+  if(unit) rows=rows.filter(a=>a.sample?.unit_id===unit);
+  if(!rows.length){ res.innerHTML=`<div class="panel"><div class="empty">Δεν βρέθηκαν μετρήσεις στο διάστημα.</div></div>`; return; }
+
+  // aggregate per parameter
+  const agg={};
+  rows.forEach(a=>{
+    const p=a.parameter||{}; const code=p.code||"—";
+    const g=agg[code]||(agg[code]={label:p.label_el||code,n:0,sum:0,min:Infinity,max:-Infinity,out:0,ideal:`${p.ideal_min??"−∞"} – ${p.ideal_max??"+∞"}`});
+    if(a.value!=null){ g.n++; g.sum+=Number(a.value); g.min=Math.min(g.min,a.value); g.max=Math.max(g.max,a.value);
+      if(rangeOf(a.value,p)!=="ok"&&rangeOf(a.value,p)!=="na") g.out++; }
+  });
+  const summary=Object.values(agg).map(g=>({
+    Παράμετρος:g.label, Πλήθος:g.n, "Μ.Ο.":g.n?+(g.sum/g.n).toFixed(2):null,
+    Ελάχιστο:g.n?+g.min.toFixed(2):null, Μέγιστο:g.n?+g.max.toFixed(2):null,
+    "Ιδανικό":g.ideal, "Εκτός":g.out, "% Εκτός":g.n?Math.round(100*g.out/g.n)+"%":"0%"
+  }));
+  state._report={rows,summary,from,to};
+
+  res.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+      <div class="small muted">${rows.length} μετρήσεις · ${summary.length} παράμετροι</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn" id="exp-csv">⤓ CSV</button>
+        <button class="btn primary" id="exp-xlsx">⤓ Excel</button>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:16px"><h3>Σύνοψη ανά παράμετρο</h3><div class="body">${
+      table(["Παράμετρος","Πλήθος","Μ.Ο.","Ελάχ.","Μέγ.","Ιδανικό","Εκτός","% Εκτός"],
+        summary.map(s=>[esc(s.Παράμετρος),s.Πλήθος,s["Μ.Ο."]??"—",s.Ελάχιστο??"—",s.Μέγιστο??"—",
+          `<span class="ideal">${esc(s.Ιδανικό)}</span>`,s.Εκτός,
+          `<b style="color:${parseInt(s["% Εκτός"])>0?'var(--high)':'var(--ok)'}">${s["% Εκτός"]}</b>`]))
+    }</div></div>`;
+  $("#exp-xlsx").onclick=()=>exportXlsx();
+  $("#exp-csv").onclick=()=>exportCsv();
+}
+function reportDetailRows(){
+  return state._report.rows.map(a=>({
+    Ημερομηνία:fmtDate(a.created_at), Μονάδα:a.sample?.unit?.name||"", Δείγμα:a.sample?.code||"",
+    Παράμετρος:a.parameter?.label_el||a.parameter?.code||"", Τιμή:a.value, Μονάδα_μέτρησης:a.unit||"",
+    Κατάσταση:({ok:"ιδανικό",low:"χαμηλό",high:"υψηλό",na:"—"})[rangeOf(a.value,a.parameter||{})]
+  }));
+}
+function exportXlsx(){
+  if(!window.XLSX) return toast("Το Excel library δεν φόρτωσε.");
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state._report.summary), "Σύνοψη");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reportDetailRows()), "Αναλυτικά");
+  const name=`LabPortal_report_${state._report.from||"all"}_${state._report.to||""}.xlsx`;
+  XLSX.writeFile(wb, name); toast("Excel κατέβηκε");
+}
+function exportCsv(){
+  const rows=reportDetailRows();
+  const heads=Object.keys(rows[0]);
+  const csv=[heads.join(","),...rows.map(r=>heads.map(h=>{
+    const v=r[h]==null?"":String(r[h]); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+  }).join(","))].join("\n");
+  const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:`LabPortal_report_${state._report.from||"all"}.csv`});
+  document.body.append(a); a.click(); a.remove(); toast("CSV κατέβηκε");
+}
+
+/* ============================ Units management ============================ */
+async function renderUnits(){
+  const main=$("#main");
+  main.innerHTML=`<div class="page-head">
+      <div><h1 class="page-title">Μονάδες</h1><div class="sub">Εγκαταστάσεις / σημεία δειγματοληψίας</div></div>
+      ${canWrite()?`<button class="btn primary" id="btn-new-unit">＋ Νέα μονάδα</button>`:""}
+    </div><div class="panel"><div class="body" id="units-body"><div class="empty">Φόρτωση…</div></div></div>`;
+  if(canWrite()) $("#btn-new-unit").onclick=()=>unitForm();
+  const { data } = await sb.from("units").select("*").eq("tenant_id",state.tenantId).order("name");
+  const body=$("#units-body");
+  body.innerHTML=(data||[]).length ? table(
+    ["Όνομα","Τοποθεσία","Σημειώσεις",""],
+    data.map(u=>[esc(u.name),esc(u.location||"—"),esc(u.notes||"—"),
+      canWrite()?`<span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn ghost sm" data-edit="${u.id}">✎</button><button class="btn ghost sm danger" data-del="${u.id}">✕</button></span>`:""])
+  ) : `<div class="empty">Καμία μονάδα. ${canWrite()?"Πάτησε «Νέα μονάδα».":""}</div>`;
+  (data||[]).forEach(u=>{
+    const e=$(`#units-body [data-edit="${u.id}"]`); if(e) e.onclick=()=>unitForm(u);
+    const d=$(`#units-body [data-del="${u.id}"]`); if(d) d.onclick=async()=>{
+      if(!confirm(`Διαγραφή μονάδας «${u.name}»; Τα δείγματά της θα παραμείνουν χωρίς μονάδα.`))return;
+      const{error}=await sb.from("units").delete().eq("id",u.id);
+      if(error)return toast("Σφάλμα: "+error.message); toast("Διαγράφηκε"); renderUnits();
+    };
+  });
+}
+function unitForm(u){
+  const body=el("div");
+  body.innerHTML=`
+    <div class="field"><label>Όνομα</label><input class="input" id="u-name" value="${esc(u?.name||"")}"></div>
+    <div class="field"><label>Τοποθεσία</label><input class="input" id="u-loc" value="${esc(u?.location||"")}"></div>
+    <div class="field"><label>Σημειώσεις</label><textarea class="input" id="u-notes" rows="2">${esc(u?.notes||"")}</textarea></div>`;
+  modal(u?"Επεξεργασία μονάδας":"Νέα μονάδα", body, async close=>{
+    const name=$("#u-name").value.trim(); if(!name)return toast("Το όνομα είναι υποχρεωτικό.");
+    const payload={name,location:$("#u-loc").value.trim()||null,notes:$("#u-notes").value.trim()||null};
+    const { error } = u
+      ? await sb.from("units").update(payload).eq("id",u.id)
+      : await sb.from("units").insert({...payload,tenant_id:state.tenantId});
+    if(error)return toast("Σφάλμα: "+error.message);
+    close(); toast(u?"Αποθηκεύτηκε":"Δημιουργήθηκε"); await loadRefData(); renderUnits();
+  });
+}
+
+/* ============================ Parameters management ============================ */
+async function renderParams(){
+  const main=$("#main");
+  main.innerHTML=`<div class="page-head">
+      <div><h1 class="page-title">Παράμετροι</h1><div class="sub">Μετρούμενα μεγέθη & ιδανικά εύρη</div></div>
+      ${canWrite()?`<button class="btn primary" id="btn-new-param">＋ Νέα παράμετρος</button>`:""}
+    </div><div class="panel"><div class="body" id="params-body"><div class="empty">Φόρτωση…</div></div></div>`;
+  if(canWrite()) $("#btn-new-param").onclick=()=>paramForm();
+  const { data } = await sb.from("parameters").select("*")
+    .or(`tenant_id.is.null,tenant_id.eq.${state.tenantId}`).order("sort_order");
+  // effective: tenant row overrides global of same code
+  const byCode={}; (data||[]).forEach(p=>{ if(!byCode[p.code]||p.tenant_id) byCode[p.code]=p; });
+  const list=Object.values(byCode).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  const body=$("#params-body");
+  body.innerHTML=list.length ? table(
+    ["Κωδικός","Ετικέτα","Μον. μέτρ.","Ιδανικό min","Ιδανικό max","Πηγή",""],
+    list.map(p=>{
+      const global=!p.tenant_id;
+      const act=!canWrite()?"":global
+        ? `<button class="btn ghost sm" data-copy="${p.code}">Προσαρμογή</button>`
+        : `<span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn ghost sm" data-edit="${p.id}">✎</button><button class="btn ghost sm danger" data-del="${p.id}">✕</button></span>`;
+      return [`<code>${esc(p.code)}</code>`,esc(p.label_el||"—"),esc(p.default_unit||"—"),
+        p.ideal_min??"—",p.ideal_max??"—",
+        global?`<span class="badge st">προεπιλογή</span>`:`<span class="badge ok">δικό σου</span>`, act];
+    })
+  ) : `<div class="empty">Καμία παράμετρος. Τρέξε το db/seed.sql ή πρόσθεσε νέα.</div>`;
+  list.forEach(p=>{
+    const e=$(`#params-body [data-edit="${p.id}"]`); if(e) e.onclick=()=>paramForm(p);
+    const c=$(`#params-body [data-copy="${p.code}"]`); if(c) c.onclick=()=>paramForm({...p,id:null,tenant_id:state.tenantId});
+    const d=$(`#params-body [data-del="${p.id}"]`); if(d) d.onclick=async()=>{
+      if(!confirm(`Διαγραφή παραμέτρου «${p.label_el||p.code}»;`))return;
+      const{error}=await sb.from("parameters").delete().eq("id",p.id);
+      if(error)return toast("Σφάλμα: "+error.message); toast("Διαγράφηκε"); await loadRefData(); renderParams();
+    };
+  });
+}
+function paramForm(p){
+  const isEdit=p&&p.id;
+  const body=el("div");
+  body.innerHTML=`
+    <div class="row">
+      <div class="field"><label>Κωδικός</label><input class="input" id="p-code" value="${esc(p?.code||"")}" ${isEdit?"disabled":""} placeholder="π.χ. fe"></div>
+      <div class="field"><label>Μονάδα μέτρησης</label><input class="input" id="p-unit" value="${esc(p?.default_unit||"")}" placeholder="mg/l"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Ετικέτα (EL)</label><input class="input" id="p-el" value="${esc(p?.label_el||"")}"></div>
+      <div class="field"><label>Ετικέτα (EN)</label><input class="input" id="p-en" value="${esc(p?.label_en||"")}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Ιδανικό min</label><input class="input" id="p-min" type="number" step="any" value="${p?.ideal_min??""}"></div>
+      <div class="field"><label>Ιδανικό max</label><input class="input" id="p-max" type="number" step="any" value="${p?.ideal_max??""}"></div>
+      <div class="field"><label>Σειρά</label><input class="input" id="p-sort" type="number" value="${p?.sort_order??100}"></div>
+    </div>
+    <p class="small muted">${isEdit?"":"Η παράμετρος αποθηκεύεται για τον τρέχοντα πελάτη."}</p>`;
+  modal(isEdit?"Επεξεργασία παραμέτρου":"Νέα παράμετρος", body, async close=>{
+    const code=$("#p-code").value.trim(); if(!code)return toast("Ο κωδικός είναι υποχρεωτικός.");
+    const payload={
+      code, default_unit:$("#p-unit").value.trim()||null, label_el:$("#p-el").value.trim()||null,
+      label_en:$("#p-en").value.trim()||null,
+      ideal_min:$("#p-min").value!==""?Number($("#p-min").value):null,
+      ideal_max:$("#p-max").value!==""?Number($("#p-max").value):null,
+      sort_order:Number($("#p-sort").value)||100
+    };
+    const { error } = isEdit
+      ? await sb.from("parameters").update(payload).eq("id",p.id)
+      : await sb.from("parameters").insert({...payload,tenant_id:state.tenantId});
+    if(error)return toast("Σφάλμα: "+(error.message.includes("duplicate")?"Υπάρχει ήδη παράμετρος με αυτόν τον κωδικό.":error.message));
+    close(); toast(isEdit?"Αποθηκεύτηκε":"Δημιουργήθηκε"); await loadRefData(); renderParams();
+  });
+}
+
+/* ============================ Users & invitations ============================ */
+async function renderUsers(){
+  const main=$("#main");
+  if(!isAdmin()){ main.innerHTML=`<div class="panel"><div class="empty">Δεν έχεις δικαίωμα πρόσβασης.</div></div>`; return; }
+  main.innerHTML=`<div class="page-head">
+      <div><h1 class="page-title">Χρήστες</h1><div class="sub">Μέλη του πελάτη & προσκλήσεις</div></div>
+      <button class="btn primary" id="btn-invite">＋ Πρόσκληση</button>
+    </div>
+    <div class="panel" style="margin-bottom:16px"><h3>Μέλη</h3><div class="body" id="members-body"><div class="empty">Φόρτωση…</div></div></div>
+    <div class="panel" style="margin-bottom:16px"><h3>Εκκρεμείς προσκλήσεις</h3><div class="body" id="inv-body"></div></div>
+    ${state.profile.is_platform_admin?`<div class="panel"><h3>Χωρίς πελάτη (αναμονή ανάθεσης)</h3><div class="body" id="unassigned-body"></div></div>`:""}`;
+  $("#btn-invite").onclick=()=>inviteForm();
+  const { data:members } = await sb.from("profiles").select("*").eq("tenant_id",state.tenantId).order("email");
+  renderMembers(members||[]);
+  const { data:invs } = await sb.from("invitations").select("*").eq("tenant_id",state.tenantId).is("accepted_at",null).order("created_at",{ascending:false});
+  renderInvs(invs||[]);
+  if(state.profile.is_platform_admin){
+    const { data:un } = await sb.from("profiles").select("*").is("tenant_id",null).order("email");
+    renderUnassigned(un||[]);
+  }
+}
+function roleSelect(p){
+  return `<select class="input role-sel" data-uid="${p.id}" style="padding:5px 8px;max-width:130px">
+    ${["admin","operator","viewer"].map(r=>`<option value="${r}"${p.role===r?" selected":""}>${r}</option>`).join("")}</select>`;
+}
+function renderMembers(members){
+  const body=$("#members-body");
+  body.innerHTML=members.length? table(
+    ["Email","Όνομα","Ρόλος",""],
+    members.map(p=>[esc(p.email||"—"),esc(p.full_name||"—"),
+      p.is_platform_admin?`<span class="badge ok">platform admin</span>`:roleSelect(p),
+      (state.profile.is_platform_admin && !p.is_platform_admin)?`<button class="btn ghost sm danger" data-rm="${p.id}">Αφαίρεση</button>`:""])
+  ) : `<div class="empty">Κανένα μέλος σε αυτόν τον πελάτη.</div>`;
+  $$("#members-body .role-sel").forEach(s=>s.onchange=async()=>{
+    const {error}=await sb.from("profiles").update({role:s.value}).eq("id",s.dataset.uid);
+    toast(error?("Σφάλμα: "+error.message):"Ο ρόλος ενημερώθηκε");
+  });
+  $$("#members-body [data-rm]").forEach(b=>b.onclick=async()=>{
+    if(!confirm("Αφαίρεση χρήστη από τον πελάτη; Θα χάσει την πρόσβαση."))return;
+    const {error}=await sb.from("profiles").update({tenant_id:null,role:"viewer"}).eq("id",b.dataset.rm);
+    if(error)return toast("Σφάλμα: "+error.message); toast("Αφαιρέθηκε"); renderUsers();
+  });
+}
+function renderInvs(invs){
+  const body=$("#inv-body");
+  body.innerHTML=invs.length? table(
+    ["Email","Ρόλος","Στάλθηκε",""],
+    invs.map(i=>[esc(i.email),`<span class="badge st">${i.role}</span>`,fmtDate(i.created_at),
+      `<button class="btn ghost sm danger" data-revoke="${i.id}">Ακύρωση</button>`])
+  ) : `<div class="empty">Καμία εκκρεμής πρόσκληση.</div>`;
+  $$("#inv-body [data-revoke]").forEach(b=>b.onclick=async()=>{
+    const {error}=await sb.from("invitations").delete().eq("id",b.dataset.revoke);
+    if(error)return toast("Σφάλμα: "+error.message); toast("Ακυρώθηκε"); renderUsers();
+  });
+}
+function renderUnassigned(un){
+  const body=$("#unassigned-body");
+  body.innerHTML=un.length? table(
+    ["Email","Όνομα",""],
+    un.map(p=>[esc(p.email||"—"),esc(p.full_name||"—"),
+      `<button class="btn primary sm" data-assign="${p.id}">Ανάθεση εδώ</button>`])
+  ) : `<div class="empty">Κανένας χρήστης σε αναμονή.</div>`;
+  $$("#unassigned-body [data-assign]").forEach(b=>b.onclick=async()=>{
+    const {error}=await sb.from("profiles").update({tenant_id:state.tenantId,role:"operator"}).eq("id",b.dataset.assign);
+    if(error)return toast("Σφάλμα: "+error.message); toast("Ανατέθηκε (ρόλος: operator)"); renderUsers();
+  });
+}
+function inviteForm(){
+  const body=el("div");
+  body.innerHTML=`
+    <div class="field"><label>Email</label><input class="input" id="iv-email" type="email" placeholder="user@example.com"></div>
+    <div class="field"><label>Ρόλος</label><select class="input" id="iv-role">
+      <option value="operator">operator</option><option value="viewer">viewer</option><option value="admin">admin</option></select></div>
+    <p class="small muted">Δεν στέλνεται email αυτόματα. Δώσε στον χρήστη να κάνει <b>εγγραφή</b> με αυτό το email — θα αντιστοιχιστεί αυτόματα στον πελάτη με τον ρόλο.</p>`;
+  modal("Νέα πρόσκληση", body, async close=>{
+    const email=$("#iv-email").value.trim().toLowerCase(); if(!email)return toast("Συμπλήρωσε email.");
+    const {error}=await sb.from("invitations").insert({tenant_id:state.tenantId,email,role:$("#iv-role").value,invited_by:state.profile.id});
+    if(error)return toast("Σφάλμα: "+error.message);
+    close(); toast("Η πρόσκληση δημιουργήθηκε"); renderUsers();
+  },"Δημιουργία");
+}
+
+/* ============================ Audit log ============================ */
+async function renderAudit(){
+  const main=$("#main");
+  if(!isAdmin()){ main.innerHTML=`<div class="panel"><div class="empty">Δεν έχεις δικαίωμα πρόσβασης.</div></div>`; return; }
+  main.innerHTML=`<div class="page-head"><div><h1 class="page-title">Αρχείο ενεργειών</h1><div class="sub">Ιστορικό αλλαγών (audit log)</div></div></div>
+    <div class="panel"><div class="body" id="audit-body"><div class="empty">Φόρτωση…</div></div></div>`;
+  const { data, error } = await sb.from("audit_log").select("*,actor:profiles(email)")
+    .eq("tenant_id",state.tenantId).order("created_at",{ascending:false}).limit(200);
+  const body=$("#audit-body");
+  if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  const ACT={insert:"δημιουργία",update:"ενημέρωση",delete:"διαγραφή"};
+  const ENT={units:"μονάδα",parameters:"παράμετρος",samples:"δείγμα",analyses:"ανάλυση",invoices:"τιμολόγιο",profiles:"χρήστης"};
+  body.innerHTML=(data||[]).length? table(
+    ["Ημ/νία","Χρήστης","Ενέργεια","Οντότητα"],
+    data.map(a=>[new Date(a.created_at).toLocaleString("el-GR"),esc(a.actor?.email||"—"),
+      `<span class="badge ${a.action==='delete'?'high':a.action==='insert'?'ok':'st'}">${ACT[a.action]||a.action}</span>`,
+      ENT[a.entity]||esc(a.entity||"—")])
+  ) : `<div class="empty">Καμία καταγεγραμμένη ενέργεια ακόμα.</div>`;
+}
+
+/* ============================ Security / MFA (TOTP) ============================ */
+async function renderSecurity(){
+  const main=$("#main");
+  main.innerHTML=`<div class="page-head"><div><h1 class="page-title">Ασφάλεια</h1><div class="sub">Έλεγχος ταυτότητας 2 βημάτων (2FA)</div></div></div>
+    <div class="panel"><h3>Authenticator (TOTP)</h3><div class="body" id="sec-body"><div class="empty">Φόρτωση…</div></div></div>`;
+  await loadFactors();
+}
+async function loadFactors(){
+  const body=$("#sec-body"); let factors=[];
+  try{ const { data } = await sb.auth.mfa.listFactors(); factors=(data&&data.totp)||[]; }
+  catch(e){ body.innerHTML=`<div class="empty">Το MFA δεν είναι διαθέσιμο εδώ: ${esc(e.message||String(e))}</div>`; return; }
+  if(!factors.length){
+    body.innerHTML=`<div style="padding:18px">
+      <p class="muted">Δεν έχεις ενεργό 2FA. Πρόσθεσε εφαρμογή authenticator για επιπλέον ασφάλεια στη σύνδεση.</p>
+      <button class="btn primary" id="btn-enroll">Ενεργοποίηση 2FA</button></div>`;
+    $("#btn-enroll").onclick=enrollMfa;
+  } else {
+    body.innerHTML=table(["Συσκευή","Κατάσταση",""],
+      factors.map(f=>[esc(f.friendly_name||"Authenticator"),
+        `<span class="badge ${f.status==='verified'?'ok':'st'}">${f.status==='verified'?'ενεργό':esc(f.status)}</span>`,
+        `<button class="btn ghost sm danger" data-un="${f.id}">Αφαίρεση</button>`]));
+    $$("#sec-body [data-un]").forEach(b=>b.onclick=async()=>{
+      if(!confirm("Αφαίρεση του 2FA;"))return;
+      const {error}=await sb.auth.mfa.unenroll({ factorId:b.dataset.un });
+      if(error)return toast("Σφάλμα: "+error.message); toast("Αφαιρέθηκε"); loadFactors();
+    });
+  }
+}
+async function enrollMfa(){
+  const { data, error } = await sb.auth.mfa.enroll({ factorType:"totp", friendlyName:"Authenticator" });
+  if(error) return toast("Σφάλμα: "+error.message);
+  const factorId=data.id, qr=data.totp.qr_code, secret=data.totp.secret;
+  const body=el("div");
+  const qrHtml=(typeof qr==="string" && qr.trim().startsWith("<svg")) ? qr : `<img src="${qr}" alt="QR" style="width:180px;height:180px">`;
+  body.innerHTML=`<p class="small muted">Σάρωσε τον κωδικό με Google Authenticator / Authy, μετά βάλε τον 6-ψήφιο κωδικό.</p>
+    <div style="text-align:center;margin:12px 0">${qrHtml}</div>
+    <p class="small">Χειροκίνητο κλειδί: <code style="user-select:all">${esc(secret)}</code></p>
+    <div class="field"><label>Κωδικός επιβεβαίωσης</label>
+      <input class="input" id="en-code" inputmode="numeric" maxlength="6" style="letter-spacing:5px;text-align:center;font-size:20px"></div>
+    <div id="en-msg"></div>`;
+  modal("Ενεργοποίηση 2FA", body, async close=>{
+    const code=$("#en-code").value.trim();
+    const { data:ch, error:ce } = await sb.auth.mfa.challenge({ factorId });
+    if(ce){ $("#en-msg").innerHTML=`<div class="msg err">${esc(ce.message)}</div>`; return; }
+    const { error:ve } = await sb.auth.mfa.verify({ factorId, challengeId:ch.id, code });
+    if(ve){ $("#en-msg").innerHTML=`<div class="msg err">Λάθος κωδικός.</div>`; return; }
+    close(); toast("Το 2FA ενεργοποιήθηκε"); loadFactors();
+  },"Επιβεβαίωση");
+}
+
+/* ============================ Financials (invoices) ============================ */
+async function renderFinance(){
+  const main=$("#main");
+  if(!isAdmin()){ main.innerHTML=`<div class="panel"><div class="empty">Δεν έχεις δικαίωμα πρόσβασης.</div></div>`; return; }
+  main.innerHTML=`<div class="page-head">
+      <div><h1 class="page-title">Οικονομικά</h1><div class="sub">Τιμολόγια & εισπράξεις ανά περίοδο</div></div>
+      <button class="btn primary" id="btn-new-inv">＋ Νέο τιμολόγιο</button></div>
+    <div class="stats" id="fin-stats"></div>
+    <div class="panel"><div class="body" id="fin-body"><div class="empty">Φόρτωση…</div></div></div>`;
+  $("#btn-new-inv").onclick=()=>invoiceForm();
+  const { data, error } = await sb.from("invoices").select("*").eq("tenant_id",state.tenantId)
+    .order("period",{ascending:false}).order("created_at",{ascending:false});
+  const body=$("#fin-body");
+  if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  const rows=data||[];
+  const total=rows.reduce((s,i)=>s+Number(i.amount||0),0);
+  const paid=rows.filter(i=>i.status==="paid").reduce((s,i)=>s+Number(i.amount||0),0);
+  $("#fin-stats").innerHTML=`${statTile("Τιμολόγια",rows.length)}${statTile("Συνολικό ποσό",total.toFixed(2)+" €")}${statTile("Εξοφλημένα",paid.toFixed(2)+" €","var(--ok)")}${statTile("Εκκρεμή",(total-paid).toFixed(2)+" €",(total-paid)>0?"var(--warn)":"var(--ink)")}`;
+  const ST={draft:"πρόχειρο",issued:"εκδόθηκε",paid:"εξοφλήθηκε"};
+  body.innerHTML=rows.length? table(
+    ["Περίοδος","Ποσό","Κατάσταση","Έκδοση","Σημ.",""],
+    rows.map(i=>[esc(i.period||"—"),`<b>${Number(i.amount).toFixed(2)} ${esc(i.currency||"EUR")}</b>`,
+      `<span class="badge ${i.status==='paid'?'ok':i.status==='issued'?'low':'st'}">${ST[i.status]||esc(i.status)}</span>`,
+      fmtDate(i.issued_at),esc(i.notes||"—"),
+      `<span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn ghost sm" data-edit="${i.id}">✎</button><button class="btn ghost sm danger" data-del="${i.id}">✕</button></span>`])
+  ) : `<div class="empty">Κανένα τιμολόγιο ακόμα.</div>`;
+  rows.forEach(i=>{
+    const e=$(`#fin-body [data-edit="${i.id}"]`); if(e) e.onclick=()=>invoiceForm(i);
+    const d=$(`#fin-body [data-del="${i.id}"]`); if(d) d.onclick=async()=>{
+      if(!confirm("Διαγραφή τιμολογίου;"))return;
+      const{error}=await sb.from("invoices").delete().eq("id",i.id);
+      if(error)return toast("Σφάλμα: "+error.message); toast("Διαγράφηκε"); renderFinance();
+    };
+  });
+}
+function invoiceForm(inv){
+  const body=el("div");
+  const now=new Date(); const defPeriod=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  body.innerHTML=`
+    <div class="row">
+      <div class="field"><label>Περίοδος (YYYY-MM)</label><input class="input" id="in-period" value="${esc(inv?.period||defPeriod)}"></div>
+      <div class="field"><label>Ποσό</label><input class="input" id="in-amount" type="number" step="0.01" value="${inv?.amount??""}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Νόμισμα</label><input class="input" id="in-curr" value="${esc(inv?.currency||"EUR")}"></div>
+      <div class="field"><label>Κατάσταση</label><select class="input" id="in-status">${
+        [["draft","πρόχειρο"],["issued","εκδόθηκε"],["paid","εξοφλήθηκε"]].map(([k,v])=>`<option value="${k}"${inv?.status===k?" selected":""}>${v}</option>`).join("")}</select></div>
+      <div class="field"><label>Ημ/νία έκδοσης</label><input class="input" id="in-date" type="date" value="${inv?.issued_at||""}"></div>
+    </div>
+    <div class="field"><label>Σημειώσεις</label><textarea class="input" id="in-notes" rows="2">${esc(inv?.notes||"")}</textarea></div>`;
+  modal(inv?"Επεξεργασία τιμολογίου":"Νέο τιμολόγιο", body, async close=>{
+    const payload={period:$("#in-period").value.trim()||null,amount:Number($("#in-amount").value)||0,
+      currency:$("#in-curr").value.trim()||"EUR",status:$("#in-status").value,issued_at:$("#in-date").value||null,
+      notes:$("#in-notes").value.trim()||null};
+    const { error } = inv
+      ? await sb.from("invoices").update(payload).eq("id",inv.id)
+      : await sb.from("invoices").insert({...payload,tenant_id:state.tenantId});
+    if(error)return toast("Σφάλμα: "+error.message);
+    close(); toast(inv?"Αποθηκεύτηκε":"Δημιουργήθηκε"); renderFinance();
+  });
+}
+
+/* ============================ Branding / tenant settings ============================ */
+function applyBranding(){
+  const t=(state.tenants||[]).find(x=>x.id===state.tenantId);
+  const c=t&&t.settings&&t.settings.brand_color;
+  document.documentElement.style.setProperty("--primary",
+    (typeof c==="string" && /^#[0-9a-fA-F]{6}$/.test(c)) ? c : "#2f7d5b");
+}
+async function renderSettings(){
+  const main=$("#main");
+  if(!state.profile.is_platform_admin){ main.innerHTML=`<div class="panel"><div class="empty">Μόνο ο platform admin αλλάζει ρυθμίσεις πελάτη.</div></div>`; return; }
+  const t=(state.tenants||[]).find(x=>x.id===state.tenantId)||{}; const s=t.settings||{};
+  const col=(/^#[0-9a-fA-F]{6}$/.test(s.brand_color||"")?s.brand_color:"#2f7d5b");
+  main.innerHTML=`<div class="page-head"><div><h1 class="page-title">Ρυθμίσεις πελάτη</h1><div class="sub">${esc(t.name||"")}</div></div></div>
+    <div class="panel"><div class="body" style="padding:20px;max-width:460px">
+      <div class="field"><label>Όνομα πελάτη</label><input class="input" id="set-name" value="${esc(t.name||"")}"></div>
+      <div class="field"><label>Χρώμα (brand)</label>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="color" id="set-color" value="${col}" style="width:54px;height:38px;border:1px solid var(--border);border-radius:8px;background:none">
+          <button class="btn sm" id="set-preview">Προεπισκόπηση</button>
+          <span class="small muted">Κύριο χρώμα εφαρμογής.</span>
+        </div></div>
+      <button class="btn primary" id="set-save" style="margin-top:8px">Αποθήκευση</button>
+    </div></div>`;
+  $("#set-preview").onclick=()=>document.documentElement.style.setProperty("--primary",$("#set-color").value);
+  $("#set-save").onclick=async()=>{
+    const name=$("#set-name").value.trim()||t.name;
+    const settings={...s, brand_color:$("#set-color").value};
+    const { error } = await sb.from("tenants").update({name, settings}).eq("id",state.tenantId);
+    if(error) return toast("Σφάλμα: "+error.message);
+    const tt=(state.tenants||[]).find(x=>x.id===state.tenantId); if(tt){ tt.name=name; tt.settings=settings; }
+    applyBranding(); renderTenantArea(); toast("Αποθηκεύτηκε");
+  };
+}
+
+/* ============================ helpers: table builder ============================ */
+function table(headers, rows, rowClicks){
+  const thead=`<thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead>`;
+  const tbody=`<tbody>${rows.map((r,i)=>`<tr${rowClicks&&rowClicks[i]?' class="clickable" data-ri="'+i+'"':''}>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  const html=`<table>${thead}${tbody}</table>`;
+  // defer binding of row clicks
+  setTimeout(()=>{ if(rowClicks) $$("tr[data-ri]").forEach(tr=>{const f=rowClicks[+tr.dataset.ri]; if(f) tr.onclick=f;}); },0);
+  return html;
+}
+function canWrite(){ return state.profile && (state.profile.is_platform_admin || ["admin","operator"].includes(state.profile.role)); }
+function isAdmin(){ return state.profile && (state.profile.is_platform_admin || state.profile.role==="admin"); }
+
+/* after password auth: enforce MFA if the account has a verified factor */
+async function afterAuth(user){
+  try{
+    const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if(aal && aal.currentLevel==="aal1" && aal.nextLevel==="aal2"){ return promptMfa(user); }
+  }catch(_){}
+  await onLoggedIn(user);
+}
+function promptMfa(user){
+  const body=el("div");
+  body.innerHTML=`<p class="muted small">Εισήγαγε τον 6-ψήφιο κωδικό από την εφαρμογή authenticator σου.</p>
+    <div class="field"><label>Κωδικός 2FA</label>
+      <input class="input" id="mfa-code" inputmode="numeric" maxlength="6" placeholder="000000" style="letter-spacing:5px;text-align:center;font-size:20px"></div>
+    <div id="mfa-msg"></div>`;
+  modal("Επαλήθευση 2 βημάτων", body, async close=>{
+    const code=$("#mfa-code").value.trim();
+    const { data:f } = await sb.auth.mfa.listFactors();
+    const totp=((f&&f.totp)||[])[0]; if(!totp){ close(); return onLoggedIn(user); }
+    const { data:ch, error:ce } = await sb.auth.mfa.challenge({ factorId: totp.id });
+    if(ce){ $("#mfa-msg").innerHTML=`<div class="msg err">${esc(ce.message)}</div>`; return; }
+    const { error:ve } = await sb.auth.mfa.verify({ factorId: totp.id, challengeId: ch.id, code });
+    if(ve){ $("#mfa-msg").innerHTML=`<div class="msg err">Λάθος κωδικός, δοκίμασε ξανά.</div>`; return; }
+    close(); await onLoggedIn(user);
+  }, "Επαλήθευση");
+}
+
+/* ============================ auth UI wiring ============================ */
+let authMode="login";
+$("#su-save").onclick=()=>{
+  const url=$("#su-url").value.trim().replace(/\/$/,""), key=$("#su-key").value.trim();
+  if(!url||!key) return setMsg("#setup-msg","err","Συμπλήρωσε URL και anon key.");
+  localStorage.setItem("lp-url",url); localStorage.setItem("lp-key",key);
+  CFG.url=url; CFG.key=key; setMsg("#setup-msg","ok","Αποθηκεύτηκε…"); boot();
+};
+$("#li-reconf").onclick=()=>{ $("#su-url").value=CFG.url; $("#su-key").value=CFG.key; show("setup"); };
+$("#li-mode").onclick=()=>{
+  authMode = authMode==="login" ? "signup" : "login";
+  const isLogin = authMode==="login";
+  $("#li-submit").textContent = isLogin ? "Είσοδος" : "Δημιουργία λογαριασμού";
+  $("#li-pass").setAttribute("autocomplete", isLogin ? "current-password" : "new-password");
+  $("#li-mode").textContent = isLogin ? "Δεν έχεις λογαριασμό; Εγγραφή" : "Έχεις ήδη λογαριασμό; Είσοδος";
+  setMsg("#login-msg","","");
+};
+$("#login-form").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const btn=$("#li-submit"); const email=$("#li-email").value.trim(), pass=$("#li-pass").value;
+  btn.disabled=true; setMsg("#login-msg","","");
+  if(authMode==="signup"){
+    btn.textContent="Δημιουργία…";
+    const { data, error } = await sb.auth.signUp({ email, password:pass });
+    btn.disabled=false; btn.textContent="Δημιουργία λογαριασμού";
+    if(error) return setMsg("#login-msg","err", error.message);
+    if(data.session){ await afterAuth(data.user); }
+    else setMsg("#login-msg","ok","Έλεγξε το email σου για επιβεβαίωση, μετά κάνε είσοδο.");
+    return;
+  }
+  btn.textContent="Σύνδεση…";
+  const { data, error } = await sb.auth.signInWithPassword({ email, password:pass });
+  btn.disabled=false; btn.textContent="Είσοδος";
+  if(error) return setMsg("#login-msg","err", error.message==="Invalid login credentials"?"Λάθος email ή κωδικός.":error.message);
+  await afterAuth(data.user);
+});
+$("#nav-logout").onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
+$$(".nav-item[data-view]").forEach(b=>b.onclick=()=>go(b.dataset.view));
+$("#menu-btn").onclick=()=>{ $("#sidebar").classList.toggle("open"); $("#scrim").classList.toggle("hidden"); };
+$("#scrim").onclick=()=>{ $("#sidebar").classList.remove("open"); $("#scrim").classList.add("hidden"); };
+window.go=go; window.state=state;   // used by inline back button
+
+/* ============================ i18n (EL ⇄ EN) ============================
+   Greek is the source language. When LANG==="en" we translate UI text nodes
+   and placeholders against a curated dictionary via a MutationObserver, so the
+   render code stays untouched. Dynamic/interpolated values stay as-is. */
+const I18N = {
+  // nav / chrome
+  "Επισκόπηση":"Overview","Δείγματα":"Samples","Μαζική καταχώρηση":"Bulk entry",
+  "Reports":"Reports","Διαχείριση":"Management","Μονάδες":"Units","Παράμετροι":"Parameters",
+  "Οικονομικά":"Financials","Χρήστες":"Users","Αρχείο ενεργειών":"Audit log",
+  "Ρυθμίσεις πελάτη":"Client settings","Ασφάλεια":"Security","Αποσύνδεση":"Sign out",
+  "Πελάτης:":"Client:","Χωρίς αντιστοιχισμένο πελάτη":"No assigned client",
+  // auth / setup
+  "Πλατφόρμα εργαστηριακών αναλύσεων":"Lab-analysis platform","Email":"Email","Κωδικός":"Password",
+  "Είσοδος":"Sign in","Σύνδεση…":"Signing in…","Δημιουργία…":"Creating…",
+  "Δεν έχεις λογαριασμό; Εγγραφή":"No account? Sign up","Έχεις ήδη λογαριασμό; Είσοδος":"Have an account? Sign in",
+  "Δημιουργία λογαριασμού":"Create account","Αλλαγή Supabase ρυθμίσεων":"Change Supabase settings",
+  "Supabase URL":"Supabase URL","Supabase anon key":"Supabase anon key","Αποθήκευση & σύνδεση":"Save & connect",
+  "Έλεγξε το email σου για επιβεβαίωση, μετά κάνε είσοδο.":"Check your email to confirm, then sign in.",
+  "Λάθος email ή κωδικός.":"Wrong email or password.",
+  // common buttons / words
+  "Αποθήκευση":"Save","Άκυρο":"Cancel","Δημιουργία":"Create","Επιβεβαίωση":"Confirm","Επαλήθευση":"Verify",
+  "← Πίσω":"← Back","Προεπισκόπηση":"Preview","Αποθήκευση…":"Saving…","Φόρτωση…":"Loading…",
+  "Όλες":"All","Όνομα":"Name","Τοποθεσία":"Location","Σημειώσεις":"Notes","Σειρά":"Order",
+  "Ημ/νία":"Date","Ημ/νία δειγμ.":"Sample date","Τύπος":"Type","Κατάσταση":"Status","Μονάδα":"Unit",
+  "Δείγμα":"Sample","Παράμετρος":"Parameter","Τιμή":"Value","Μέθοδος":"Method","Ιδανικό":"Ideal",
+  "Μονάδα μέτρησης":"Measurement unit","Κωδικός δείγματος":"Sample code","Ρόλος":"Role",
+  // dashboard
+  "Σύνοψη δραστηριότητας & τιμές εκτός ιδανικού εύρους":"Activity summary & out-of-range values",
+  "Σύνολο δειγμάτων":"Total samples","Δείγματα τον μήνα":"Samples this month","Εκτός ιδανικού":"Out of range",
+  "Τιμές εκτός ιδανικού (πρόσφατες)":"Out-of-range values (recent)","Πρόσφατα δείγματα":"Recent samples",
+  "Καμία τιμή εκτός ιδανικού εύρους 🎉":"No out-of-range values 🎉","Δεν υπάρχουν δείγματα ακόμα.":"No samples yet.",
+  "✓ ιδανικό":"✓ ideal","▼ χαμηλό":"▼ low","▲ υψηλό":"▲ high",
+  // samples
+  "Λίστα & διαχείριση δειγμάτων":"Sample list & management","Όλες οι μονάδες":"All units","Όλοι οι τύποι":"All types",
+  "＋ Νέο δείγμα":"+ New sample","Νέο δείγμα":"New sample","Αναλύσεις":"Analyses",
+  "＋ Προσθήκη ανάλυσης":"+ Add analysis","Προσθήκη ανάλυσης":"Add analysis","Καμία ανάλυση ακόμα.":"No analyses yet.",
+  "Αρχεία & φωτογραφίες":"Files & photos","Κανένα αρχείο.":"No files.","Άνοιγμα":"Open","Μέγεθος":"Size","Όνομα αρχείου":"Filename",
+  "Μέθοδος (προαιρετικό)":"Method (optional)","Επεξεργασία μονάδας":"Edit unit","Νέα μονάδα":"New unit","＋ Νέα μονάδα":"+ New unit",
+  // kinds / statuses
+  "Φύλλο":"Leaf","Έδαφος":"Soil","Νερό":"Water","Λιμνοδεξαμενή":"Reservoir","Καρπός":"Fruit","Υπόστρωμα":"Substrate","Άλλο":"Other",
+  "Πρόχειρο":"Draft","Παραλήφθηκε":"Received","Σε ανάλυση":"Analyzing","Ολοκληρώθηκε":"Done","Αρχείο":"Archived",
+  // bulk
+  "Δημιούργησε δείγμα και καταχώρησε όλες τις μετρήσεις μαζί":"Create a sample and enter all measurements at once",
+  "Μετρήσεις":"Measurements","Αποθήκευση καταχώρησης":"Save entry",
+  // reports
+  "Σύνοψη μετρήσεων & εξαγωγή σε Excel":"Measurement summary & Excel export","Από":"From","Έως":"To",
+  "Υπολογισμός":"Calculate","Σύνοψη ανά παράμετρο":"Summary per parameter","Πλήθος":"Count","Μ.Ο.":"Avg",
+  "Ελάχ.":"Min","Μέγ.":"Max","Εκτός":"Out","% Εκτός":"% Out",
+  // units / params mgmt
+  "Εγκαταστάσεις / σημεία δειγματοληψίας":"Facilities / sampling points","Μετρούμενα μεγέθη & ιδανικά εύρη":"Measured quantities & ideal ranges",
+  "＋ Νέα παράμετρος":"+ New parameter","Νέα παράμετρος":"New parameter","Επεξεργασία παραμέτρου":"Edit parameter",
+  "Πηγή":"Source","προεπιλογή":"default","δικό σου":"custom","Προσαρμογή":"Customize","Μον. μέτρ.":"Unit","Ιδανικό min":"Ideal min","Ιδανικό max":"Ideal max",
+  // users / invitations
+  "Μέλη του πελάτη & προσκλήσεις":"Client members & invitations","＋ Πρόσκληση":"+ Invite","Νέα πρόσκληση":"New invitation",
+  "Μέλη":"Members","Εκκρεμείς προσκλήσεις":"Pending invitations","Χωρίς πελάτη (αναμονή ανάθεσης)":"Unassigned (awaiting assignment)",
+  "Καμία εκκρεμής πρόσκληση.":"No pending invitations.","Ακύρωση":"Revoke","Αφαίρεση":"Remove","Ανάθεση εδώ":"Assign here",
+  "Στάλθηκε":"Sent","Δεν έχεις δικαίωμα πρόσβασης.":"You don't have access.",
+  // audit
+  "Ιστορικό αλλαγών (audit log)":"Change history (audit log)","Χρήστης":"User","Ενέργεια":"Action","Οντότητα":"Entity",
+  "δημιουργία":"create","ενημέρωση":"update","διαγραφή":"delete","Καμία καταγεγραμμένη ενέργεια ακόμα.":"No recorded actions yet.",
+  // security / mfa
+  "Έλεγχος ταυτότητας 2 βημάτων (2FA)":"Two-factor authentication (2FA)","Ενεργοποίηση 2FA":"Enable 2FA",
+  "Επαλήθευση 2 βημάτων":"Two-step verification","Κωδικός 2FA":"2FA code","Κωδικός επιβεβαίωσης":"Confirmation code",
+  "Συσκευή":"Device","ενεργό":"active",
+  // finance
+  "Τιμολόγια & εισπράξεις ανά περίοδο":"Invoices & receipts per period","＋ Νέο τιμολόγιο":"+ New invoice",
+  "Νέο τιμολόγιο":"New invoice","Επεξεργασία τιμολογίου":"Edit invoice","Τιμολόγια":"Invoices","Συνολικό ποσό":"Total amount",
+  "Εξοφλημένα":"Paid","Εκκρεμή":"Outstanding","Περίοδος":"Period","Ποσό":"Amount","Νόμισμα":"Currency",
+  "Ημ/νία έκδοσης":"Issue date","Σημ.":"Notes","Κανένα τιμολόγιο ακόμα.":"No invoices yet.",
+  "πρόχειρο":"draft","εκδόθηκε":"issued","εξοφλήθηκε":"paid",
+  // settings
+  "Όνομα πελάτη":"Client name","Χρώμα (brand)":"Brand color","Κύριο χρώμα εφαρμογής.":"App primary color.",
+};
+let LANG = localStorage.getItem("lp-lang")||"el";
+function trFull(s){
+  if(I18N[s]) return I18N[s];
+  const m=s.match(/^([＋+←▼▲✓€🧪⚙▣⊞📊🏭👥🗂🎨🔒⎋]+\s*)(.+)$/);  // strip a leading symbol
+  if(m && I18N[m[2]]) return m[1]+I18N[m[2]];
+  return null;
+}
+function translateNode(root){
+  if(LANG!=="en"||!root) return;
+  if(root.nodeType===3){ const t=root.nodeValue.trim(); const e=t&&trFull(t); if(e) root.nodeValue=root.nodeValue.replace(t,e); return; }
+  if(root.nodeType!==1) return;
+  const walk=document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes=[]; while(walk.nextNode()) nodes.push(walk.currentNode);
+  nodes.forEach(n=>{ const t=n.nodeValue.trim(); const e=t&&trFull(t); if(e) n.nodeValue=n.nodeValue.replace(t,e); });
+  (root.querySelectorAll?root.querySelectorAll("[placeholder]"):[]).forEach(el2=>{
+    const p=el2.getAttribute("placeholder"); if(p&&I18N[p]) el2.setAttribute("placeholder",I18N[p]);
+  });
+  if(root.hasAttribute&&root.hasAttribute("placeholder")){ const p=root.getAttribute("placeholder"); if(I18N[p]) root.setAttribute("placeholder",I18N[p]); }
+}
+function initI18n(){
+  $("#lang-toggle").textContent = LANG==="en" ? "ΕΛ" : "EN";
+  $("#lang-toggle").onclick=()=>{ LANG = LANG==="en"?"el":"en"; localStorage.setItem("lp-lang",LANG); location.reload(); };
+  if(LANG!=="en") return;
+  document.documentElement.lang="en";
+  const obs=new MutationObserver(muts=>muts.forEach(m=>m.addedNodes.forEach(nd=>translateNode(nd))));
+  obs.observe(document.body,{childList:true,subtree:true});
+  translateNode(document.body);
+}
+initI18n();
+
+boot();
+</script>
+</body>
+</html>
