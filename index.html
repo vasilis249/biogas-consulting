@@ -63,6 +63,7 @@
           padding:12px 22px;background:var(--surface);border-bottom:1px solid var(--border)}
   .sidebar{grid-area:side;background:var(--surface);border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}
   .main{grid-area:main;padding:22px;overflow:auto;min-width:0}
+  .nav-group{padding:10px 12px 4px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.05em;color:var(--muted)}
   .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);color:var(--ink);
             font-weight:600;font-size:14px;border:none;background:none;width:100%;text-align:left}
   .nav-item:hover{background:var(--surface-2)}
@@ -202,6 +203,31 @@
     .scrim{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:39}
   }
   .menu-btn{display:none}
+  @media (max-width:820px){
+    .btn{min-height:44px} .btn.sm{min-height:44px;min-width:44px;justify-content:center}
+    .nav-item{min-height:44px}
+    input,select,textarea,.input{font-size:16px !important}     /* iOS zooms into fields < 16px */
+  }
+  @media (max-width:640px){
+    table.rt thead{display:none}
+    table.rt, table.rt tbody, table.rt tr, table.rt td{display:block;width:100%}
+    table.rt tr{border:1px solid var(--border);border-radius:var(--r-sm);margin:0 0 10px;padding:6px 12px;background:var(--surface)}
+    table.rt td{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:6px 0;border:0;white-space:normal;text-align:right}
+    table.rt td::before{content:attr(data-label);color:var(--muted);font-size:12.5px;font-weight:600;text-align:left;flex:0 0 40%}
+    table.rt td[data-label=""]::before{content:none} table.rt td[data-label=""]{justify-content:flex-end}
+    table.rt td:has(.cell-wrap){flex-direction:column;gap:2px;text-align:left}
+    table.rt td .cell-wrap{min-width:0;max-width:none;text-align:left}
+    table.rt td:first-child{font-weight:700}
+    .panel .body:has(> table.rt){padding:10px}
+    #pl-lines .grid-entry thead{display:none}
+    #pl-lines .grid-entry tr{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px 8px;padding:8px 0;border-bottom:1px solid var(--border)}
+    #pl-lines .grid-entry td{padding:0;border:0;font-size:13px}
+    #pl-lines .grid-entry td:first-child{grid-column:1 / -1}
+    #pl-lines .grid-entry td:first-child select{white-space:normal}
+    #b-grid .grid-entry thead{display:none}
+    #b-grid .grid-entry tr{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;padding:8px 0;border-bottom:1px solid var(--border)}
+    #b-grid .grid-entry td{padding:0;border:0} #b-grid .grid-entry td:first-child{grid-column:1 / -1;font-weight:700}
+  }
 
   @media print{
     .sidebar,.topbar,.menu-btn,#lang-toggle,.page-head button,.btn{display:none !important}
@@ -230,7 +256,7 @@
 <div id="login" class="center-wrap hidden">
   <div class="auth-card card">
     <div class="brand" style="margin-bottom:4px"><span class="dot">◉</span> BioGas</div>
-    <p class="muted small" style="margin-top:4px">Πλατφόρμα εργαστηριακών αναλύσεων</p>
+    <p class="muted small" style="margin-top:4px">Λειτουργία μονάδας βιοαερίου</p>
     <div id="login-msg"></div>
     <form id="login-form">
       <div class="field"><label>Email</label><input id="li-email" class="input" type="email" autocomplete="username" required></div>
@@ -255,23 +281,27 @@
   <div class="scrim hidden" id="scrim"></div>
   <aside class="sidebar" id="sidebar">
     <div class="brand" style="font-size:18px;margin:4px 6px 16px"><span class="dot">◉</span> BioGas</div>
+    <div class="nav-group">Βάρδια</div>
     <button class="nav-item active" data-view="dashboard"><span class="ic">☀</span> Σήμερα</button>
-    <button class="nav-item" data-view="samples"><span class="ic">🧪</span> Δείγματα</button>
-    <button class="nav-item" data-view="bulk"><span class="ic">⊞</span> Μαζική καταχώρηση</button>
-    <button class="nav-item" data-view="production"><span class="ic">⚡</span> Παραγωγή</button>
     <button class="nav-item" data-view="feeding"><span class="ic">🌾</span> Τροφοδοσία</button>
+    <button class="nav-item" data-view="production"><span class="ic">⚡</span> Παραγωγή</button>
+    <button class="nav-item" data-view="bulk"><span class="ic">⊞</span> Εργαστήριο</button>
     <button class="nav-item" data-view="digestate"><span class="ic">♻</span> Χώνευμα</button>
-    <button class="nav-item" data-view="massbalance"><span class="ic">⚖</span> Ισοζύγιο</button>
-    <button class="nav-item" data-view="red3"><span class="ic">🌱</span> Αειφορία</button>
-    <button class="nav-item" data-view="alerts"><span class="ic">🔔</span> Ειδοποιήσεις<span class="nav-badge hidden" id="alert-badge"></span></button>
+    <button class="nav-item" data-view="alerts"><span class="ic">🔔</span> Συναγερμοί<span class="nav-badge hidden" id="alert-badge"></span></button>
     <button class="nav-item" data-view="shift"><span class="ic">📋</span> Βάρδια</button>
     <button class="nav-item" data-view="incidents"><span class="ic">⚠</span> Συμβάντα</button>
     <button class="nav-item" data-view="maintenance"><span class="ic">🔧</span> Συντήρηση ΣΗΘ</button>
     <button class="nav-item nav-sos" data-view="emergency"><span class="ic">🆘</span> Έκτακτα</button>
-    <button class="nav-item" data-view="reports"><span class="ic">📊</span> Reports</button>
     <div class="nav-sep"></div>
-    <div class="small muted" style="padding:4px 12px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.05em">Διαχείριση</div>
-    <button class="nav-item" data-view="units"><span class="ic">🏭</span> Μονάδες</button>
+    <div class="nav-group">Ανάλυση / σύμβουλος</div>
+    <button class="nav-item" data-view="opsreport"><span class="ic">📅</span> Αναφορά λειτουργίας</button>
+    <button class="nav-item" data-view="massbalance"><span class="ic">⚖</span> Ισοζύγιο</button>
+    <button class="nav-item" data-view="red3"><span class="ic">🌱</span> Αειφορία</button>
+    <button class="nav-item" data-view="samples"><span class="ic">🧪</span> Δείγματα</button>
+    <button class="nav-item" data-view="reports"><span class="ic">📊</span> Στατιστικά εργαστηρίου</button>
+    <div class="nav-sep"></div>
+    <div class="nav-group">Διαχείριση</div>
+    <button class="nav-item" data-view="units"><span class="ic">🏭</span> Χωνευτές</button>
     <button class="nav-item" data-view="feedstocks"><span class="ic">🧺</span> Υποστρώματα</button>
     <button class="nav-item" data-view="params"><span class="ic">⚙</span> Παράμετροι</button>
     <button class="nav-item nav-admin" data-view="finance"><span class="ic">€</span> Οικονομικά</button>
@@ -363,6 +393,15 @@ function setMsg(where,type,text){const c=$(where);c.innerHTML=text?`<div class="
 
 const SAMPLE_KIND = {digester:"Χωνευτής",substrate_in:"Υπόστρωμα/Τροφοδοσία",biogas:"Βιοαέριο",digestate:"Χώνευμα (digestate)",influent:"Εισροή",effluent:"Εκροή",water:"Νερό",other:"Άλλο",
   leaf:"Φύλλο",soil:"Έδαφος",reservoir:"Λιμνοδεξαμενή",fruit:"Καρπός",substrate:"Υπόστρωμα"};
+// A measurement belongs to the day the sample was taken (trend alarms compare by date). Today → now;
+// an earlier date → 09:00 local of that day.
+function sampleMeasuredAt(date){
+  if(!date || date>=localDate()) return new Date().toISOString();
+  const [y,m,d]=String(date).slice(0,10).split("-").map(Number); return new Date(y,m-1,d,9,0,0).toISOString();
+}
+// Sample types offered for a biogas plant (the agronomy types stay readable for old records only).
+const BIOGAS_KINDS = ["digester","biogas","digestate","substrate_in","influent","effluent","water","other"];
+const KIND_PARAMS = {digester:["ph_dig","fos_tac","temp_dig","ts","vs","vfa","nh4"], biogas:["ch4","co2","h2s","o2"], digestate:["dig_n","dig_p2o5","dig_k2o","ts","vs"]};
 const STATUS = {draft:"Πρόχειρο",received:"Παραλήφθηκε",analyzing:"Σε ανάλυση",done:"Ολοκληρώθηκε",archived:"Αρχείο"};
 
 /* classify a value against a parameter's ideal range */
@@ -494,6 +533,7 @@ function go(view){
   else if(view==="massbalance") renderMassBalance();
   else if(view==="red3") renderRed3();
   else if(view==="alerts") renderAlerts();
+  else if(view==="opsreport") renderOpsReport();
   else if(view==="shift") renderShift();
   else if(view==="incidents") renderIncidents();
   else if(view==="maintenance") renderMaintenance();
@@ -602,7 +642,7 @@ async function renderDashboard(){
   $("#dash-stats").innerHTML =
     statTile("Ηλ. ενέργεια χθες", yProd.length ? yMwh.toFixed(1)+" MWh" : "—")+
     statTile("Διαθεσιμότητα ΣΗΘ χθες", yAvail.length ? Math.round(yAvail.reduce((s,r)=>s+Number(r.chp_hours),0)/(yAvail.length*24)*100)+"%" : "—")+
-    statTile("Ενεργές ειδοποιήσεις", act.length, actCrit?'var(--high)':(act.length?'var(--warn)':'var(--ok)'))+
+    statTile("Ενεργοί συναγερμοί", act.length, actCrit?'var(--high)':(act.length?'var(--warn)':'var(--ok)'))+
     statTile("Κρίσιμες", actCrit, actCrit?'var(--high)':'var(--ok)');
 
   const cards=state.units.map(u=>{
@@ -649,13 +689,13 @@ async function renderDashboard(){
       ${due.length?`<div class="uc-maint small">${due.map(m=>`<a href="#" onclick="go('maintenance');return false" class="badge ${maintState(m)==="crit"?"high":"warnb"}">🔧 ${esc(m.task)}: ${m.hours_left<=0?"οφείλεται (+"+fmtNum(-m.hours_left)+" h)":"σε "+fmtNum(m.hours_left)+" h"}</a>`).join(" ")}</div>`:""}
       ${myTasks.length?`<div class="uc-tasks small"><b>📌 Εκκρεμότητες:</b> ${myTasks.map(t=>esc(t.title)).join(" · ")}</div>`:""}
       ${labRows||dailyRows?`<table class="uc-lab"><tbody>${labRows}${dailyRows}</tbody></table><div class="small muted" style="margin-top:2px">Διαγράμματα: τελευταίες 8 εβδομάδες · πράσινη ζώνη = ιδανικό εύρος</div>`:""}
-      <div class="uc-issues">${issues||`<div class="small" style="color:var(--ok)">✓ Καμία ενεργή ειδοποίηση</div>`}</div>
+      <div class="uc-issues">${issues||`<div class="small" style="color:var(--ok)">✓ Κανένας ενεργός συναγερμός</div>`}</div>
     </section>`;
   });
   $("#dash-units").innerHTML = cards.join("") || `<div class="empty">Πρόσθεσε πρώτα χωνευτές στις «Μονάδες».</div>`;
   const plant=act.filter(a=>!a.unit_id || !state.units.some(u=>u.id===a.unit_id));
   $("#dash-plant").innerHTML = plant.length ? `<div class="panel" id="dash-alerts"><h3 style="display:flex;justify-content:space-between;align-items:center">
-      <span>🔔 Γενικές ειδοποιήσεις (χώνευμα, χωρίς χωνευτή)</span><button class="btn ghost sm" onclick="go('alerts')">Όλες →</button></h3>
+      <span>🔔 Γενικοί συναγερμοί (χώνευμα, χωρίς χωνευτή)</span><button class="btn ghost sm" onclick="go('alerts')">Όλες →</button></h3>
       <div class="body"><ul class="plain-list">${plant.map(a=>`<li>${sevBadge(a.severity)} ${esc(a.message||a.metric||"")}</li>`).join("")}</ul></div></div>` : "";
 }
 function statTile(k,v,color){return `<div class="stat"><div class="k">${esc(k)}</div><div class="v" style="color:${color||'var(--ink)'}">${esc(v)}</div></div>`;}
@@ -673,7 +713,7 @@ async function renderSamples(){
     <div class="panel"><div class="body" id="samples-body"><div class="empty">Φόρτωση…</div></div></div>`;
 
   const fu=$("#f-unit"); state.units.forEach(u=>fu.append(el("option",{value:u.id},u.name)));
-  const fk=$("#f-kind"); Object.entries(SAMPLE_KIND).forEach(([k,v])=>fk.append(el("option",{value:k},v)));
+  const fk=$("#f-kind"); BIOGAS_KINDS.forEach(k=>fk.append(el("option",{value:k},SAMPLE_KIND[k])));
   fu.onchange=fk.onchange=loadSamples;
   if(canWrite()) $("#btn-new-sample").onclick=()=>sampleForm();
   loadSamples();
@@ -802,6 +842,7 @@ function renderBulk(){
         <div class="field"><label>Τύπος</label><select class="input" id="b-kind"></select></div>
         <div class="field"><label>Ημ/νία δειγμ.</label><input class="input" id="b-date" type="date"></div>
       </div>
+      <label class="small" style="display:flex;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="b-all"> Εμφάνιση όλων των παραμέτρων (όχι μόνο του τύπου δείγματος)</label>
     </div></div>
     <div class="panel"><h3>Μετρήσεις</h3><div class="body"><div id="b-grid"></div></div></div>
     <div style="display:flex;justify-content:flex-end;margin-top:16px">
@@ -810,20 +851,25 @@ function renderBulk(){
   const bu=$("#b-unit");
   if(!state.units.length) bu.append(el("option",{value:""},"— καμία μονάδα —"));
   state.units.forEach(u=>bu.append(el("option",{value:u.id},u.name)));
-  const bk=$("#b-kind"); Object.entries(SAMPLE_KIND).forEach(([k,v])=>bk.append(el("option",{value:k},v)));
+  const bk=$("#b-kind"); BIOGAS_KINDS.forEach(k=>bk.append(el("option",{value:k},SAMPLE_KIND[k])));
   $("#b-date").value = localDate();
-
-  if(!state.params.length){ $("#b-grid").innerHTML=`<div class="empty">Δεν υπάρχουν παράμετροι. Τρέξε το db/seed.sql.</div>`; }
-  else {
-    $("#b-grid").innerHTML = `<table class="grid-entry"><thead><tr><th>Παράμετρος</th><th style="width:140px">Τιμή</th><th style="width:120px">Μονάδα</th><th>Ιδανικό</th></tr></thead><tbody>${
-      state.params.map(p=>`<tr>
-        <td>${esc(p.label_el||p.code)}</td>
-        <td><input class="input" type="number" step="any" data-pid="${p.id}" data-unit="${esc(p.default_unit||"")}"></td>
-        <td><input class="input" data-unit-for="${p.id}" value="${esc(p.default_unit||"")}"></td>
-        <td class="ideal">${p.ideal_min??"−∞"} – ${p.ideal_max??"+∞"}</td>
+  // only the parameters of the sample type (digester 7, gas 4, digestate 5) — «όλες» shows the rest
+  const drawGrid=()=>{
+    if(!state.params.length){ $("#b-grid").innerHTML=`<div class="empty">Δεν υπάρχουν παράμετροι. Τρέξε το db/seed.sql.</div>`; return; }
+    const keep={}; $$("#b-grid input[data-pid]").forEach(i=>{ if(i.value!=="") keep[i.dataset.pid]=i.value; });
+    const codes=KIND_PARAMS[bk.value], all=$("#b-all").checked||!codes;
+    const list=state.params.filter(p=>all || codes.includes(p.code) || keep[p.id]!=null)
+      .sort((a,b)=>codes&&!all ? codes.indexOf(a.code)-codes.indexOf(b.code) : 0);
+    $("#b-grid").innerHTML = `<table class="grid-entry"><thead><tr><th>Παράμετρος</th><th style="width:140px">Τιμή</th><th style="width:120px">Μον. μέτρ.</th><th>Ιδανικό</th></tr></thead><tbody>${
+      list.map(p=>`<tr>
+        <td data-label="">${esc(p.label_el||p.code)}</td>
+        <td data-label="Τιμή"><input class="input" type="number" step="any" inputmode="decimal" data-pid="${p.id}" data-unit="${esc(p.default_unit||"")}" value="${esc(keep[p.id]??"")}"></td>
+        <td data-label="Μον. μέτρ."><input class="input" data-unit-for="${p.id}" value="${esc(p.default_unit||"")}"></td>
+        <td class="ideal" data-label="Ιδανικό">${p.ideal_min??"−∞"} – ${p.ideal_max??"+∞"}</td>
       </tr>`).join("")
     }</tbody></table>`;
-  }
+  };
+  bk.onchange=drawGrid; $("#b-all").onchange=drawGrid; drawGrid();
   $("#b-save").onclick=saveBulk;
 }
 async function saveBulk(){
@@ -841,7 +887,7 @@ async function saveBulk(){
   }).select().single();
   if(e1){ btn.disabled=false; btn.textContent="Αποθήκευση καταχώρησης"; return toast("Σφάλμα: "+e1.message); }
   const payload=rows.map(r=>({tenant_id:state.tenantId,sample_id:s.id,parameter_id:r.pid,
-    value:Number(r.value),unit:r.unit||null,measured_at:new Date().toISOString(),created_by:state.profile.id}));
+    value:Number(r.value),unit:r.unit||null,measured_at:sampleMeasuredAt(date),created_by:state.profile.id}));
   const { error:e2 } = await sb.from("analyses").insert(payload);
   btn.disabled=false; btn.textContent="Αποθήκευση καταχώρησης";
   if(e2) return toast("Το δείγμα αποθηκεύτηκε, αλλά οι μετρήσεις απέτυχαν: "+e2.message);
@@ -871,7 +917,7 @@ function sampleForm(){
     <div class="field"><label>Μονάδα</label><select class="input" id="s-unit">${unitOpts}</select></div>
     <div class="row">
       <div class="field"><label>Κωδικός</label><input class="input" id="s-code" placeholder="π.χ. L-2025-001"></div>
-      <div class="field"><label>Τύπος</label><select class="input" id="s-kind">${Object.entries(SAMPLE_KIND).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></div>
+      <div class="field"><label>Τύπος</label><select class="input" id="s-kind">${BIOGAS_KINDS.map(k=>`<option value="${k}">${SAMPLE_KIND[k]}</option>`).join("")}</select></div>
     </div>
     <div class="row">
       <div class="field"><label>Ημ/νία δειγμ.</label><input class="input" id="s-date" type="date" value="${localDate()}"></div>
@@ -906,7 +952,7 @@ function analysisForm(sample){
     const { error } = await sb.from("analyses").insert({
       tenant_id:state.tenantId, sample_id:sample.id, parameter_id:$("#a-param").value,
       value:Number(v), unit:$("#a-unit").value.trim()||null, method:$("#a-method").value.trim()||null,
-      measured_at:new Date().toISOString(), created_by:state.profile.id
+      measured_at:sampleMeasuredAt(sample.taken_at), created_by:state.profile.id
     });
     if(error) return toast("Σφάλμα: "+error.message);
     close(); toast("Προστέθηκε"); refreshAlertBadge(); openSample(sample.id);
@@ -936,7 +982,7 @@ function monthsAgoISO(n){ const d=new Date(); d.setMonth(d.getMonth()-n); return
 function renderReports(){
   const main=$("#main");
   main.innerHTML = `<div class="page-head">
-      <div><h1 class="page-title">Reports</h1><div class="sub">Σύνοψη μετρήσεων & εξαγωγή σε Excel</div></div>
+      <div><h1 class="page-title">Στατιστικά εργαστηρίου</h1><div class="sub">Σύνοψη μετρήσεων ανά παράμετρο & εξαγωγή σε Excel — η μηνιαία αναφορά λειτουργίας είναι στην «Αναφορά λειτουργίας»</div></div>
       <div style="display:flex;gap:10px">
         <button class="btn" id="r-monthly">📅 Μηνιαία αναφορά</button>
         ${isAdmin()?`<button class="btn" id="r-backup">⤓ Backup (JSON)</button>`:""}
@@ -1096,7 +1142,7 @@ function exportCsv(){
 async function renderUnits(){
   const main=$("#main");
   main.innerHTML=`<div class="page-head">
-      <div><h1 class="page-title">Μονάδες</h1><div class="sub">Εγκαταστάσεις / σημεία δειγματοληψίας</div></div>
+      <div><h1 class="page-title">Χωνευτές</h1><div class="sub">Χωνευτές / γραμμές με τον όγκο και την ΣΗΘ τους</div></div>
       ${isAdmin()?`<button class="btn primary" id="btn-new-unit">＋ Νέα μονάδα</button>`:""}
     </div><div class="panel"><div class="body" id="units-body"><div class="empty">Φόρτωση…</div></div></div>`;
   if(isAdmin()) $("#btn-new-unit").onclick=()=>unitForm();
@@ -2251,7 +2297,7 @@ async function digestateForm(r){
 async function renderAlerts(){
   const main=$("#main"), AF=state.alertFilter||(state.alertFilter="open");
   main.innerHTML=`<div class="page-head">
-      <div><h1 class="page-title">Ειδοποιήσεις</h1>
+      <div><h1 class="page-title">Συναγερμοί</h1>
         <div class="sub">Αυτόματοι συναγερμοί της βάσης όταν δείκτες βγαίνουν εκτός ορίων — σταθερότητα χωνευτή, αέριο, ΣΗΘ, OLR/HRT, άζωτο</div></div>
       <div style="display:flex;gap:6px"><button class="btn sm ${AF==="open"?"primary":""}" data-af="open">Ενεργές</button>
         <button class="btn sm ${AF==="all"?"primary":""}" data-af="all">Ιστορικό</button></div></div>
@@ -2278,9 +2324,9 @@ async function renderAlerts(){
     ? ((b.severity==="critical")-(a.severity==="critical")) || ((!b.acknowledged_at)-(!a.acknowledged_at)) || String(b.updated_at).localeCompare(String(a.updated_at))
     : String(b.updated_at).localeCompare(String(a.updated_at)));
   body.innerHTML = list.length ? table(
-    ["Από","Σοβαρότητα","Μονάδα","Πηγή","Μήνυμα","Κατάσταση",""],
+    ["Από","Σοβαρότητα","Χωνευτής","Πηγή","Μήνυμα","Κατάσταση",""],
     list.map(a=>[`<span class="small" title="Τελευταία ενημέρωση ${fmtDateTime(a.updated_at)}">${fmtDateTime(a.created_at)}</span>${a.resolved_at?"":`<div class="small muted">${fmtDuration(Date.now()-new Date(a.created_at))}</div>`}`,
-      sevBadge(a.severity), esc(a.unit?.name||"—"),
+      sevBadge(a.severity), esc(a.unit?.name||(a.kind==="digestate"?"Αγρός (ΖΕΝ)":"Όλη η μονάδα")),
       esc(ALERT_KIND[a.kind]||a.kind), `<div class="cell-wrap">${esc(a.message||a.metric||"")}</div>`,
       alertStateBadge(a)+(a.emailed_at?` <span title="Στάλθηκε email ${fmtDateTime(a.emailed_at)}">✉</span>`:"")
         +(a.acknowledged_at?`<div class="small muted ack-info">✓ ${esc(personName(a.acknowledged_by))} · ${fmtDateTime(a.acknowledged_at)}${a.ack_comment?`<br>«${esc(a.ack_comment)}»`:""}</div>`:""),
@@ -2363,7 +2409,9 @@ async function loadPeople(){
   return state.people=m;
 }
 const personName = id => (state.people&&state.people[id]) || "—";
-function fmtDuration(ms){ if(ms==null||ms<0) return "—"; const m=Math.round(ms/60000); return m<60 ? `${m}′` : `${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")}′`; }
+function fmtDuration(ms){ if(ms==null||ms<0) return "—"; const m=Math.round(ms/60000);
+  if(m<60) return `${m}′`; if(m<48*60) return `${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")}′`;
+  const h=Math.round(m/60); return `${Math.floor(h/24)} ημ. ${h%24} h`; }
 
 // ---------------------------------------------------------------- Βάρδια --
 async function renderShift(){
@@ -2678,6 +2726,96 @@ function serviceForm(m){
     const { error } = await sb.from("maintenance_log").insert({tenant_id:state.tenantId, plan_id:m.id, done_on, engine_hours:h!==""?Number(h):null,
       notes:$("#sf-notes").value.trim()||null, created_by:state.profile.id});
     if(error) return toast("Σφάλμα: "+error.message); close(); toast("Καταγράφηκε — ο μετρητής ωρών μηδένισε"); renderMaintenance(); }, "Καταγραφή");
+}
+
+/* ============================ Monthly operations report (operator review §5 «Αναφορές») ============================
+   What the owner and ΔΑΠΕΕΠ ask for every month: electricity/heat, CHP and flare hours, availability,
+   feed by substrate, digestate out, incidents, alarms and services — per digester and for the plant. */
+async function renderOpsReport(){
+  const main=$("#main"), OR=state.opsRep||(state.opsRep={month:localMonth(), unit:""});
+  main.innerHTML=`<div class="page-head"><div><h1 class="page-title">Αναφορά λειτουργίας</h1>
+      <div class="sub">Μηνιαία σύνοψη για ιδιοκτήτη & ΔΑΠΕΕΠ — ενέργεια, ώρες ΣΗΘ & πυρσού, διαθεσιμότητα, τροφοδοσία, χώνευμα, συμβάντα</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="margin:0"><label>Μήνας</label><input class="input" id="or-month" type="month" value="${OR.month}"></div>
+        <div class="field" style="margin:0"><label>Χωνευτής</label><select class="input" id="or-unit"><option value="">Όλη η μονάδα</option>${state.units.map(u=>`<option value="${u.id}"${OR.unit===u.id?" selected":""}>${esc(u.name)}</option>`).join("")}</select></div>
+        <button class="btn" id="or-xlsx">⤓ Excel</button><button class="btn" id="or-print">🖨 Εκτύπωση</button></div></div>
+    <div id="or-body"><div class="empty">Φόρτωση…</div></div>`;
+  $("#or-month").onchange=e=>{ OR.month=e.target.value||localMonth(); renderOpsReport(); };
+  $("#or-unit").onchange=e=>{ OR.unit=e.target.value; renderOpsReport(); };
+  $("#or-print").onclick=()=>window.print();
+  $("#or-xlsx").onclick=exportOpsReport;
+  const T=state.tenantId, { from, to } = monthRange(OR.month);
+  const tsFrom=new Date(from+"T00:00:00").toISOString(), tsTo=new Date(to+"T00:00:00").toISOString();
+  const U=q=>OR.unit?q.eq("unit_id",OR.unit):q;
+  const [pr, fe, dg, inc, al, ml] = await Promise.all([
+    U(sb.from("production").select("*").eq("tenant_id",T).gte("log_date",from).lt("log_date",to)).order("log_date",{ascending:true}).limit(5000),
+    U(sb.from("feeding").select("unit_id,feed_date,feedstock_id,mass_t").eq("tenant_id",T).gte("feed_date",from).lt("feed_date",to)).limit(20000),
+    U(sb.from("digestate").select("unit_id,mass_t,destination").eq("tenant_id",T).gte("log_date",from).lt("log_date",to)).limit(5000),
+    sb.from("incidents").select("*").eq("tenant_id",T).gte("started_at",tsFrom).lt("started_at",tsTo).order("started_at",{ascending:true}).limit(500),
+    sb.from("alerts").select("severity,kind,unit_id").eq("tenant_id",T).gte("created_at",tsFrom).lt("created_at",tsTo).limit(5000),
+    sb.from("maintenance_log").select("*").eq("tenant_id",T).gte("done_on",from).lt("done_on",to).limit(500)]);
+  const body=$("#or-body"); if(!body) return;
+  const P=pr.data||[], FE=fe.data||[], DG=dg.data||[], INC=(inc.data||[]).filter(i=>!OR.unit||i.unit_id===OR.unit),
+        AL=(al.data||[]).filter(a=>!OR.unit||a.unit_id===OR.unit), ML=ml.data||[];
+  // days in the period: the whole month, or up to today for the running month
+  const [y,m]=OR.month.split("-").map(Number), dim=new Date(y,m,0).getDate(), today=localDate();
+  const days = OR.month===today.slice(0,7) ? Number(today.slice(8,10)) : (OR.month>today.slice(0,7) ? 0 : dim);
+  const units=OR.unit ? state.units.filter(u=>u.id===OR.unit) : state.units;
+  const agg=rows=>{ const s=k=>rows.reduce((a,r)=>a+(Number(r[k])||0),0), gas=s("biogas_m3");
+    const ch4w=rows.filter(r=>r.ch4_pct!=null&&r.biogas_m3!=null).reduce((a,r)=>a+Number(r.ch4_pct)*Number(r.biogas_m3),0);
+    return {n:rows.length, mwh:s("kwh_el")/1000, mwhTh:s("kwh_th")/1000, chp:s("chp_hours"), flare:s("flare_hours"), gas,
+      ch4:gas>0?ch4w/gas:null, feed:s("feedstock_t"), planned:rows.filter(r=>r.planned_stop).length}; };
+  const per=units.map(u=>({u, ...agg(P.filter(r=>r.unit_id===u.id))})), tot=agg(P);
+  const avail=(h,nUnits)=>days>0&&nUnits>0 ? h/(days*24*nUnits)*100 : null;
+  state._ops={month:OR.month, per, tot, days, P, FE, DG, INC, ML};
+  const feedBy={}; FE.forEach(f=>{ feedBy[f.feedstock_id]=(feedBy[f.feedstock_id]||0)+(Number(f.mass_t)||0); });
+  const feedTot=Object.values(feedBy).reduce((a,b)=>a+b,0);
+  const feedRows=Object.entries(feedBy).sort((a,b)=>b[1]-a[1]);
+  const digBy={}; DG.forEach(d=>{ digBy[d.destination]=(digBy[d.destination]||0)+(Number(d.mass_t)||0); });
+  const tA=avail(tot.chp, units.length);
+  body.innerHTML=`
+    <div class="stats">
+      ${statTile("Ηλεκτρική ενέργεια", tot.mwh.toFixed(1)+" MWh")}${statTile("Θερμική ενέργεια", tot.mwhTh.toFixed(1)+" MWh")}
+      ${statTile("Ώρες ΣΗΘ", fmtNum(tot.chp)+" h")}${statTile("Διαθεσιμότητα ΣΗΘ", tA!=null?tA.toFixed(1)+"%":"—", tA!=null&&tA<85?"var(--warn)":"var(--ink)")}
+      ${statTile("Ώρες πυρσού", fmtNum(tot.flare)+" h", tot.flare>0?"var(--warn)":"var(--ink)")}${statTile("Βιοαέριο", fmtNum(Math.round(tot.gas))+" m³")}
+      ${statTile("Μ.Ο. CH₄ (σταθμ.)", tot.ch4!=null?tot.ch4.toFixed(1)+"%":"—")}${statTile("Τροφοδοσία", fmtNum(Math.round(feedTot))+" t")}
+    </div>
+    <div class="panel" style="margin-bottom:16px"><h3>Ανά χωνευτή — ${esc(OR.month)} (${days} ημέρες${days<dim&&days>0?" έως σήμερα":""})</h3><div class="body" id="or-units">${table(
+      ["Χωνευτής","Ημέρες με εγγραφή","MWh ηλ.","MWh θερμ.","Ώρες ΣΗΘ","Διαθεσιμότητα","Προγρ. στάσεις","Ώρες πυρσού","Βιοαέριο m³","CH₄ %","Τροφοδοσία t"],
+      per.map(r=>{ const a=avail(r.chp,1); return [esc(r.u.name), `${r.n} / ${days}${r.n<days?` <span class="badge warnb">λείπουν ${days-r.n}</span>`:""}`,
+        r.mwh.toFixed(1), r.mwhTh.toFixed(1), fmtNum(r.chp), a!=null?`<span style="color:${a<85?"var(--warn)":"var(--ink)"}">${a.toFixed(1)}%</span>`:"—",
+        r.planned?`🔧 ${r.planned}`:"—", fmtNum(r.flare), fmtNum(Math.round(r.gas)), r.ch4!=null?r.ch4.toFixed(1):"—", fmtNum(Math.round(r.feed))]; }))}</div></div>
+    <div class="two-col">
+      <div class="panel"><h3>Τροφοδοσία ανά υπόστρωμα</h3><div class="body">${feedRows.length?table(["Υπόστρωμα","t","% μάζας"],
+        feedRows.map(([id,t])=>[esc((state.feedstockById[id]||{}).name||"—"), fmtNum(Math.round(t*10)/10), (t/feedTot*100).toFixed(1)+"%"])):`<div class="empty">Καμία τροφοδοσία.</div>`}</div></div>
+      <div class="panel"><h3>Χώνευμα ανά προορισμό</h3><div class="body">${Object.keys(digBy).length?table(["Προορισμός","t"],
+        Object.entries(digBy).map(([k,t])=>[esc(DIG_DEST[k]||k), fmtNum(Math.round(t))])):`<div class="empty">Καμία κίνηση χωνεύματος.</div>`}</div></div>
+    </div>
+    <div class="two-col" style="margin-top:16px">
+      <div class="panel"><h3>Συμβάντα (${INC.length})</h3><div class="body">${INC.length?table(["Έναρξη","Τύπος","Σοβαρότητα","Τίτλος","Διάρκεια"],
+        INC.map(i=>[fmtDateTime(i.started_at), esc(INC_KIND[i.kind]||i.kind), incSevBadge(i.severity), `<div class="cell-wrap">${esc(i.title)}</div>`,
+          i.ended_at?fmtDuration(new Date(i.ended_at)-new Date(i.started_at)):"σε εξέλιξη"])):`<div class="empty">Κανένα συμβάν ✓</div>`}</div></div>
+      <div class="panel"><h3>Συναγερμοί & συντήρηση</h3><div class="pad">
+        <p>Νέοι συναγερμοί: <b>${AL.length}</b> (κρίσιμοι <b style="color:var(--high)">${AL.filter(a=>a.severity==="critical").length}</b>,
+          προειδοποιήσεις <b>${AL.filter(a=>a.severity!=="critical").length}</b>)</p>
+        <p>Εργασίες συντήρησης: <b>${ML.length}</b>${ML.length?`<ul>${ML.map(l=>`<li>${fmtDate(l.done_on)} — ${esc(l.notes||"")}</li>`).join("")}</ul>`:""}</p>
+        ${tot.n<days*units.length?`<div class="hint warn small">Λείπουν ${days*units.length-tot.n} ημερήσιες εγγραφές παραγωγής — τα σύνολα είναι ελλιπή.</div>`:""}
+      </div></div>
+    </div>`;
+}
+function exportOpsReport(){
+  const R=state._ops; if(!R) return toast("Δεν υπάρχουν δεδομένα.");
+  if(!window.XLSX) return toast("Το Excel library δεν φόρτωσε.");
+  const wb=XLSX.utils.book_new(), add=(name,rows)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{"—":"χωρίς δεδομένα"}]),name);
+  add("Σύνοψη", R.per.map(r=>({Χωνευτής:r.u.name, "Ημέρες με εγγραφή":r.n, "Ημέρες περιόδου":R.days, "MWh ηλ.":+r.mwh.toFixed(3), "MWh θερμ.":+r.mwhTh.toFixed(3),
+    "Ώρες ΣΗΘ":r.chp, "Διαθεσιμότητα %":R.days?+(r.chp/(R.days*24)*100).toFixed(1):null, "Προγρ. στάσεις (ημέρες)":r.planned, "Ώρες πυρσού":r.flare,
+    "Βιοαέριο m³":Math.round(r.gas), "CH4 % (σταθμ.)":r.ch4!=null?+r.ch4.toFixed(2):null, "Τροφοδοσία t":+r.feed.toFixed(1)})));
+  const fb={}; R.FE.forEach(f=>{ fb[f.feedstock_id]=(fb[f.feedstock_id]||0)+(Number(f.mass_t)||0); });
+  add("Υποστρώματα", Object.entries(fb).map(([id,t])=>({Υπόστρωμα:(state.feedstockById[id]||{}).name||id, t:+t.toFixed(2)})));
+  add("Ημερήσια παραγωγή", R.P.map(r=>({Ημερομηνία:r.log_date, Χωνευτής:unitName(r.unit_id), "kWh el":r.kwh_el, "kWh th":r.kwh_th, "Ώρες ΣΗΘ":r.chp_hours,
+    "Προγρ. στάση":r.planned_stop?"ναι":"", "Ώρες πυρσού":r.flare_hours, "Βιοαέριο m³":r.biogas_m3, "CH4 %":r.ch4_pct, "Θερμοκρασία °C":r.digester_temp_c, Σημειώσεις:r.notes||""})));
+  add("Συμβάντα", R.INC.map(i=>({Έναρξη:i.started_at, Λήξη:i.ended_at||"", Τύπος:INC_KIND[i.kind]||i.kind, Σοβαρότητα:INC_SEV[i.severity]||i.severity, Τίτλος:i.title, Ενέργειες:i.actions||""})));
+  XLSX.writeFile(wb,`Αναφορά_λειτουργίας_${R.month}.xlsx`); toast("Excel κατέβηκε");
 }
 
 /* ============================ Mass & energy balance ============================ */
@@ -3077,8 +3215,9 @@ function exportRed3Xlsx(){
 /* ============================ helpers: table builder ============================ */
 function table(headers, rows, rowClicks){
   const thead=`<thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead>`;
-  const tbody=`<tbody>${rows.map((r,i)=>`<tr${rowClicks&&rowClicks[i]?' class="clickable" data-ri="'+i+'"':''}>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody>`;
-  const html=`<table>${thead}${tbody}</table>`;
+  const lbl=headers.map(h=>esc(String(h).replace(/<[^>]*>/g,"").trim()));   // data-label → card view on phones
+  const tbody=`<tbody>${rows.map((r,i)=>`<tr${rowClicks&&rowClicks[i]?' class="clickable" data-ri="'+i+'"':''}>${r.map((c,j)=>`<td data-label="${lbl[j]||""}">${c}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  const html=`<table class="rt">${thead}${tbody}</table>`;
   // defer binding of row clicks
   setTimeout(()=>{ if(rowClicks) $$("tr[data-ri]").forEach(tr=>{const f=rowClicks[+tr.dataset.ri]; if(f) tr.onclick=f;}); },0);
   return html;
@@ -3300,6 +3439,12 @@ const I18N = {
   "🔔 Ενεργές ειδοποιήσεις":"🔔 Active alerts","Όλες →":"All →",
   // production log (operator-review fixes)
   "Ώρες πυρσού":"Flare hours",
+  // menu groups, terminology, operations report (Phase 13)
+  "Συναγερμοί":"Alarms","Ενεργοί συναγερμοί":"Active alarms","Εργαστήριο":"Laboratory","Χωνευτές":"Digesters","Ανάλυση / σύμβουλος":"Analysis / consultant",
+  "Αναφορά λειτουργίας":"Operations report","Στατιστικά εργαστηρίου":"Lab statistics","Λειτουργία μονάδας βιοαερίου":"Biogas plant operations",
+  "Ηλεκτρική ενέργεια":"Electricity","Θερμική ενέργεια":"Heat","Ώρες ΣΗΘ":"CHP hours","Διαθεσιμότητα ΣΗΘ":"CHP availability","Βιοαέριο":"Biogas",
+  "Τροφοδοσία ανά υπόστρωμα":"Feed by substrate","Χώνευμα ανά προορισμό":"Digestate by destination","Συναγερμοί & συντήρηση":"Alarms & maintenance",
+  "Όλη η μονάδα":"Whole plant","Κανένας ενεργός συναγερμός":"No active alarms",
   // shift & safety (Phase 12)
   "Βάρδια":"Shift","Συμβάντα":"Incidents","Συντήρηση ΣΗΘ":"CHP maintenance","Έκτακτα":"Emergency","🆘 Έκτακτη ανάγκη":"🆘 Emergency",
   "📝 Παράδοση βάρδιας":"📝 Shift hand-over","Ημερολόγιο βάρδιας (14 ημέρες)":"Shift log (14 days)","✔ Καταχώρηση παράδοσης":"✔ Save hand-over",

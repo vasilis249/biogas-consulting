@@ -30,7 +30,7 @@ await sleep(1200);
 
 console.log("Σήμερα (dashboard)");
 const dashTiles = await page.$$eval(".stat", s => s.map(x => [x.querySelector(".k").textContent, x.querySelector(".v").textContent]));
-const activeTile = dashTiles.find(t => t[0] === "Ενεργές ειδοποιήσεις");
+const activeTile = dashTiles.find(t => t[0] === "Ενεργοί συναγερμοί");
 check(activeTile && Number(activeTile[1]) === (await openAlerts()).length, `alarm tile matches open alarms (${activeTile && activeTile[1]})`);
 check(!dashTiles.some(t => /δειγμάτων|Δείγματα τον μήνα/.test(t[0])), "lab sample-count tiles removed");
 check(/MWh/.test((dashTiles.find(t => t[0] === "Ηλ. ενέργεια χθες") || [])[1] || ""), "yesterday's MWh on top");
@@ -426,12 +426,43 @@ check(!(await page.$("#mt-new")) && !!(await page.$("#mt-body [data-mdone]")), "
 await page.evaluate(() => { state.profile = { ...state.profile, role: "admin", is_platform_admin: true }; });
 await shot("11-emergency");
 
+console.log("Wave D — menu, terminology, lab entry, operations report");
+const groups = await page.$$eval("#sidebar .nav-group", g => g.map(x => x.textContent.trim()));
+check(groups.join("|") === "Βάρδια|Ανάλυση / σύμβουλος|Διαχείριση", `menu grouped for the shift (${groups.join(" · ")})`);
+const shiftItems = await page.$$eval("#sidebar .nav-item[data-view]", n => n.slice(0, 10).map(x => x.dataset.view));
+check(shiftItems[0] === "dashboard" && shiftItems.includes("emergency") && !shiftItems.includes("red3") && !shiftItems.includes("massbalance"),
+  "consultant pages (RED III, balance) moved out of the shift group");
+check(/Συναγερμοί/.test(await page.textContent('.nav-item[data-view="alerts"]')) && /Χωνευτές/.test(await page.textContent('.nav-item[data-view="units"]')), "operator terminology (Συναγερμοί, Χωνευτές)");
+await go("bulk");
+const nParams = () => page.$$eval("#b-grid input[data-pid]", i => i.length);
+await page.selectOption("#b-kind", "digester"); await sleep(150);
+check((await nParams()) === 7, `digester sample → 7 parameters (${await nParams()})`);
+await page.selectOption("#b-kind", "biogas"); await sleep(150);
+check((await nParams()) === 4, `gas sample → 4 parameters (${await nParams()})`);
+check(!(await page.$$eval("#b-kind option", o => o.map(x => x.value))).some(v => ["leaf", "soil", "fruit", "reservoir"].includes(v)), "agronomy sample types removed");
+const past = await page.evaluate(() => daysAgoDate(3));
+await page.fill("#b-date", past);
+await page.fill('#b-grid input[data-pid="p-h2s"]', "280");
+await page.click("#b-save");
+await waitFor(async () => (await db(() => window.__BIOGAS_DEMO_DB__.analyses.filter(a => a.parameter_id === "p-h2s" && a.value === 280).length)) === 1);
+const mAt = await db(() => window.__BIOGAS_DEMO_DB__.analyses.find(a => a.parameter_id === "p-h2s" && a.value === 280).measured_at);
+check(await page.evaluate(([m, d]) => localDate(new Date(m)) === d, [mAt, past]), `a late entry is dated on the sample day, not today (${mAt.slice(0, 10)})`);
+await go("opsreport");
+await waitFor(async () => !!(await page.$("#or-units tbody tr")));
+const opsMonth = await page.inputValue("#or-month");
+const sumKwh = await db(m => window.__BIOGAS_DEMO_DB__.production.filter(r => String(r.log_date).startsWith(m)).reduce((s, r) => s + (Number(r.kwh_el) || 0), 0), opsMonth);
+const opsMwh = parseFloat((await page.$$eval(".stat", s => (s.find(x => x.querySelector(".k").textContent === "Ηλεκτρική ενέργεια") || {}).textContent || ""))
+  .replace(/[^\d.,]/g, "").replace(",", "."));
+check(Math.abs(opsMwh - sumKwh / 1000) < 0.06, `operations report: MWh = Σ daily logs (${opsMwh} vs ${(sumKwh / 1000).toFixed(1)})`);
+check((await page.$$("#or-units tbody tr")).length === 2 && /Ώρες πυρσού/.test(await page.textContent("#or-body")), "per-digester table with CHP & flare hours");
+check(/Trip ΣΗΘ/.test(await page.textContent("#or-body")) || opsMonth !== (await page.evaluate(() => localMonth())), "incidents of the month included");
+
 console.log("English & mobile");
 await page.evaluate(() => localStorage.setItem("lp-lang", "en"));
 await page.reload({ waitUntil: "load" });
 await sleep(1200);
 const nav = await page.$$eval(".nav-item[data-view]", n => n.map(x => x.textContent));
-check(["Feeding", "Digestate", "Alerts", "Feedstocks"].every(w => nav.some(t => t.includes(w))), "new menu items translated");
+check(["Feeding", "Digestate", "Alarms", "Feedstocks", "Shift", "Emergency", "Operations report"].every(w => nav.some(t => t.includes(w))), "new menu items translated");
 await page.evaluate(() => localStorage.setItem("lp-lang", "el"));
 await page.setViewportSize({ width: 390, height: 844 });
 await page.reload({ waitUntil: "load" });
@@ -440,6 +471,12 @@ await page.evaluate(() => go("feeding"));
 await sleep(800);
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check(overflow <= 1, `no horizontal page scroll on a phone (overflow ${overflow}px)`);
+await page.evaluate(() => go("alerts"));
+await sleep(800);
+const ackBox = await page.$eval("[data-ack]", b => { const r = b.getBoundingClientRect(); return { right: r.right, h: r.height }; });
+check(ackBox.right <= 390 && ackBox.h >= 44, `phone: alarms as cards, «Επιβεβαίωση» on screen and ≥ 44 px (right ${Math.round(ackBox.right)}, h ${Math.round(ackBox.h)})`);
+const fs = await page.$eval("input, select", e => parseFloat(getComputedStyle(e).fontSize));
+check(fs >= 16, `phone: form fields ≥ 16 px, no iOS zoom (${fs}px)`);
 await shot("7-mobile-feeding");
 
 check(errors.length === 0, `no JavaScript errors${errors.length ? ": " + errors.join(" | ") : ""}`);
