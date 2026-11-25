@@ -50,7 +50,8 @@
       ["dig_n", "Ολικό άζωτο χωνεύματος (N)", "Digestate total N", "kg/t", null, null, 120],
       ["dig_p2o5", "Φώσφορος χωνεύματος (P₂O₅)", "Digestate P2O5", "kg/t", null, null, 130],
       ["dig_k2o", "Κάλιο χωνεύματος (K₂O)", "Digestate K2O", "kg/t", null, null, 140],
-    ].map(r => ({ id: "p-" + r[0], tenant_id: null, code: r[0], label_el: r[1], label_en: r[2], default_unit: r[3], ideal_min: r[4], ideal_max: r[5], sort_order: r[6], created_at: iso(dayAt(400)) })),
+    ].map(r => ({ id: "p-" + r[0], tenant_id: null, code: r[0], label_el: r[1], label_en: r[2], default_unit: r[3], ideal_min: r[4], ideal_max: r[5], sort_order: r[6],
+      trend_delta: r[0] === "fos_tac" ? 0.05 : null, trend_days: r[0] === "fos_tac" ? 14 : null, created_at: iso(dayAt(400)) })),
     feedstocks: [
       ["cattle", "Υγρή κοπριά βοοειδών", "manure", 8, 80, 210, 0, 10], ["cattle_s", "Στερεή κοπριά βοοειδών", "manure", 22, 80, 230, 0, 18],
       ["pig", "Υγρή κοπριά χοίρων", "manure", 5, 75, 300, 0, 8], ["poultry", "Κοπριά πουλερικών", "manure", 40, 75, 280, 5, 8],
@@ -71,7 +72,7 @@
       { id: "un2", tenant_id: T, name: "Χωνευτής 2", location: "Γραμμή Β", capacity_kw: 999, digester_m3: 4000, notes: "CSTR μεσόφιλος",
         commissioning_date: "2024-02-15", rated_thermal_input_mw: 2.6, red_case: 1, digestate_storage: "open", red_product: "electricity", offgas_combustion: false, created_at: iso(dayAt(380)) },
     ],
-    recipes: [], samples: [], analyses: [], production: [], feeding: [], digestate: [], files: [], audit_log: [], alerts: [],
+    recipes: [], samples: [], analyses: [], production: [], feeding: [], feeding_notes: [], digestate: [], files: [], audit_log: [], alerts: [],
     alert_recipients: [
       { id: "ar1", tenant_id: T, email: "demo@biogas.gr", min_severity: "warning", enabled: true, created_at: iso(dayAt(60)) },
       { id: "ar2", tenant_id: T, email: "owner@biogas.gr", min_severity: "critical", enabled: true, created_at: iso(dayAt(60)) },
@@ -116,8 +117,27 @@
     const ex = DB.alerts.find(a => a.dedupe_key === key && a.resolved_at == null);
     if (ex) { ex.resolved_at = at; ex.updated_at = at; }
   }
+  const num6 = x => String(Math.round(x * 1e6) / 1e6);          // numeric::text after trim_scale()
+  const anAt = x => String(x.measured_at || x.created_at);
+  function evalTrend(t, unit, param, at) {                        // mirrors eval_param_trend() (0011)
+    const key = `trend:${t}:${unit || "none"}:${param}`, p = DB.parameters.find(x => x.id === param);
+    if (!p || !p.trend_delta || !p.trend_days) return clear(key, at);
+    const rows = DB.analyses.filter(x => x.tenant_id === t && x.parameter_id === param && x.value != null && sampleUnit(x.sample_id) === (unit || null))
+      .sort((a, b) => anAt(b).localeCompare(anAt(a)) || String(b.created_at).localeCompare(String(a.created_at)));
+    const a = rows[0]; if (!a) return clear(key, at);
+    const t1 = new Date(anAt(a)).getTime(), from = t1 - p.trend_days * 864e5;
+    const win = rows.filter(x => { const tx = new Date(anAt(x)).getTime(); return tx >= from && tx < t1; }).map(x => Number(x.value));
+    if (!win.length) return clear(key, at);
+    const base = p.trend_delta > 0 ? Math.min(...win) : Math.max(...win), ch = Math.round((Number(a.value) - base) * 1e6) / 1e6;
+    if ((p.trend_delta > 0 && ch >= p.trend_delta) || (p.trend_delta < 0 && ch <= p.trend_delta)) {
+      const s = DB.samples.find(x => x.id === a.sample_id) || {}, lbl = p.label_el || p.code;
+      raise(t, unit || null, "parameter", lbl + " (τάση)", ch, Math.abs(ch) >= 2 * Math.abs(p.trend_delta) ? "critical" : "warning",
+        `${lbl} ${ch > 0 ? "ανοδική τάση" : "καθοδική τάση"} ${ch > 0 ? "+" : ""}${num6(ch)} σε ${p.trend_days} ημ. (${num6(base)} → ${num6(Number(a.value))}, όριο τάσης ${p.trend_delta > 0 ? "+" : ""}${num6(p.trend_delta)}) · ${uname(unit)} · δείγμα ${s.code || "—"}`, key, at);
+    } else clear(key, at);
+  }
   function evalParam(t, unit, param, at) {
     if (!t || !param) return;
+    evalTrend(t, unit, param, at);
     const key = `param:${t}:${unit || "none"}:${param}`;
     const a = DB.analyses.filter(x => x.tenant_id === t && x.parameter_id === param && sampleUnit(x.sample_id) === (unit || null))
       .sort((p, q) => String(q.measured_at || q.created_at).localeCompare(String(p.measured_at || p.created_at)) || String(q.created_at).localeCompare(String(p.created_at)))[0];
@@ -144,10 +164,25 @@
       raise(t, unit, "production", "CH₄ %", r.ch4_pct, r.ch4_pct < 45 ? "critical" : "warning",
         `Χαμηλό μεθάνιο ${pgnum(r.ch4_pct)}% στο βιοαέριο · ${uname(unit)} · ${ddmmyyyy(r.log_date)}`, kc, at);
     else clear(kc, at);
-    if (r.chp_hours != null && r.chp_hours < 20)
+    if (r.chp_hours != null && r.chp_hours < 20 && !r.planned_stop)
       raise(t, unit, "production", "Ώρες ΣΗΘ", r.chp_hours, r.chp_hours < 16 ? "critical" : "warning",
         `Χαμηλή διαθεσιμότητα ΣΗΘ: ${pgnum(r.chp_hours)} ώρες (${Math.round(r.chp_hours / 24 * 100)}%) · ${uname(unit)} · ${ddmmyyyy(r.log_date)}`, kp, at);
     else clear(kp, at);
+    // 0011: temperature drop vs the previous day, CH₄ falling three days in a row
+    const kt = `prod-temp:${t}:${unit || "none"}`, kf = `prod-ch4-fall:${t}:${unit || "none"}`;
+    const mine = DB.production.filter(x => x.tenant_id === t && (x.unit_id || null) === (unit || null));
+    const dayBefore = (d, n) => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() - n);
+      return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0"); };
+    const prev = mine.find(x => x.log_date === dayBefore(r.log_date, 1));
+    if (r.digester_temp_c != null && prev && prev.digester_temp_c != null && r.digester_temp_c <= prev.digester_temp_c - 1)
+      raise(t, unit, "production", "Θερμοκρασία χωνευτή", r.digester_temp_c, r.digester_temp_c <= prev.digester_temp_c - 2 ? "critical" : "warning",
+        `Πτώση θερμοκρασίας χωνευτή ${num6(prev.digester_temp_c - r.digester_temp_c)} °C σε μία ημέρα (${num6(prev.digester_temp_c)} → ${num6(r.digester_temp_c)} °C) — έλεγχος θέρμανσης · ${uname(unit)} · ${ddmmyyyy(r.log_date)}`, kt, at);
+    else clear(kt, at);
+    const v = [0, 1, 2, 3].map(n => mine.find(x => x.log_date === dayBefore(r.log_date, n))).map(x => x && x.ch4_pct != null ? Number(x.ch4_pct) : null);
+    if (v.every(x => x != null) && v[0] < v[1] && v[1] < v[2] && v[2] < v[3] && v[3] - v[0] >= 1.5)
+      raise(t, unit, "production", "CH₄ % (τάση)", num6(v[0] - v[3]) * 1, "warning",
+        `Το μεθάνιο πέφτει 3 ημέρες συνεχόμενα: ${num6(v[3])} → ${num6(v[0])}% (−${num6(v[3] - v[0])} μονάδες) — πιθανή αρχή οξίνισης · ${uname(unit)} · ${ddmmyyyy(r.log_date)}`, kf, at);
+    else clear(kf, at);
   }
   function feedingDaily() {
     const g = {};
@@ -205,7 +240,7 @@
       each(newRows, f => [...new Set(DB.feeding.filter(x => x.feedstock_id === f.id).map(x => x.tenant_id + "|" + x.unit_id))]
         .forEach(k => { const [t, u] = k.split("|"); evalFeeding(t, u, at); }));
     }
-    const AUDITED = ["units", "parameters", "samples", "analyses", "invoices", "profiles", "files", "production", "feedstocks", "recipes", "feeding", "digestate", "alert_recipients"];
+    const AUDITED = ["units", "parameters", "samples", "analyses", "invoices", "profiles", "files", "production", "feedstocks", "recipes", "feeding", "feeding_notes", "digestate", "alert_recipients"];
     const heartbeatOnly = table === "profiles" && oldRows.length && newRows.length && newRows.every((r, i) => {
       const o = { ...oldRows[i] }, n = { ...r }; delete o.last_seen; delete n.last_seen; return JSON.stringify(o) === JSON.stringify(n); });
     if (AUDITED.includes(table) && !heartbeatOnly) {
@@ -238,6 +273,9 @@
                                  { feedstock_id: "fs-pig", mass_t: 35 }, { feedstock_id: "fs-food", mass_t: 6 }];   // overload → OLR > 4
       else items = (d <= 20 ? DB.recipes[2] : DB.recipes[1]).items.map(it => ({ ...it, mass_t: r1(vary(it.mass_t, 0.04)) }));
       const fdate = dateStr(d);
+      if (unit === "un2" && (d === 20 || d === 1)) ev(dayAt(d, 7, 31), () => insertRows("feeding_notes", [{ id: uid(), tenant_id: T, unit_id: unit, feed_date: fdate,
+        note: d === 20 ? "Αλλαγή σε χειμερινή συνταγή — ξεκίνησε ο κατσίγαρος από το ελαιοτριβείο" : "Ήρθε φορτίο απορριμμάτων τροφίμων + πουλερικών, μπήκαν όλα μαζί",
+        created_by: OP, created_at: iso(dayAt(d, 7, 31)) }], dayAt(d, 7, 31)));
       ev(dayAt(d, 7, 30), () => insertRows("feeding", items.map(it => ({ id: uid(), tenant_id: T, unit_id: unit, feed_date: fdate,
         feedstock_id: it.feedstock_id, mass_t: it.mass_t, created_by: OP, created_at: iso(dayAt(d, 7, 30)) })), dayAt(d, 7, 30)));
       // production for that day, entered next morning
@@ -249,7 +287,8 @@
       const at = dayAt(d - 1, 8, 10);
       ev(at, () => insertRows("production", [{ id: uid(), tenant_id: T, unit_id: unit, log_date: fdate,
         feedstock_t: r1(items.reduce((s, i) => s + i.mass_t, 0)), biogas_m3: r10(ch4 / (ch4p / 100)), ch4_pct: ch4p,
-        kwh_el: r10(kwh), kwh_th: r10(kwh * 1.05), chp_hours: chp, flare_hours: chp < 20 ? 3.5 : 0, notes: chp < 20 ? "Συντήρηση ΣΗΘ (αλλαγή λαδιών)" : null,
+        kwh_el: r10(kwh), kwh_th: r10(kwh * 1.05), chp_hours: chp, flare_hours: chp < 20 ? 3.5 : 0, planned_stop: chp < 20,
+        digester_temp_c: r1(vary(unit === "un1" ? 40.9 : 40.2, 0.003)), notes: chp < 20 ? "Συντήρηση ΣΗΘ (αλλαγή λαδιών)" : null,
         created_by: OP, created_at: iso(at) }], at));
       const feedT = items.reduce((s, i) => s + i.mass_t, 0), gasT = r10(ch4 / (ch4p / 100)) * rhoGas(ch4p) / 1000;
       acc[unit] += feedT - gasT - ((OTHER_REMOVALS[unit] || {})[d] || 0);
@@ -331,9 +370,10 @@
     ["production_ch4_pct_check",     r => r.ch4_pct == null || (r.ch4_pct >= 0 && r.ch4_pct <= 100)],
     ["production_chp_hours_check",   r => r.chp_hours == null || (r.chp_hours >= 0 && r.chp_hours <= 24)],
     ["production_flare_hours_check", r => r.flare_hours == null || (r.flare_hours >= 0 && r.flare_hours <= 24)],
+    ["production_digester_temp_check", r => r.digester_temp_c == null || (r.digester_temp_c >= 0 && r.digester_temp_c <= 80)],
     ...["feedstock_t", "biogas_m3", "kwh_el", "kwh_th"].map(k => ["production_" + k + "_check", r => r[k] == null || r[k] >= 0]),
   ] };
-  const UNIQUE = { production: ["production_unit_day_key", ["unit_id", "log_date"]] };
+  const UNIQUE = { production: ["production_unit_day_key", ["unit_id", "log_date"]], feeding_notes: ["feeding_notes_unit_day_key", ["unit_id", "feed_date"]] };
   function violates(t, rows, others) {
     for (const r of rows) for (const [name, ok] of (CHECKS[t] || []))
       if (!ok(r)) return { code: "23514", message: `new row for relation "${t}" violates check constraint "${name}"` };

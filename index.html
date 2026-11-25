@@ -127,6 +127,43 @@
   .grid-entry input{width:100%}
   .ideal{font-size:12px;color:var(--faint)}
 
+  /* ---------- «Σήμερα» ---------- */
+  .today-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:16px;margin-bottom:18px}
+  .uc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;min-width:0}
+  .uc-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .uc-head h2{margin:0;font-size:18px}
+  .light{font-weight:700;font-size:13px;padding:3px 10px;border-radius:999px;white-space:nowrap}
+  .light.ok{background:#e6f1ea;color:#1f5c42} .light.warn{background:#fbf0dc;color:#8a5a0b} .light.crit{background:#fbe6e2;color:#9b2d1f}
+  .uc-diag{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+  .uc-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+  .kp{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;min-width:0}
+  .kp .k{font-size:12px;color:var(--muted);font-weight:600}
+  .kp .v{font-size:19px;font-weight:800;letter-spacing:-.4px;white-space:nowrap}
+  .kp .s{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .uc-lab{width:100%;border-collapse:collapse;margin-top:12px}
+  .uc-lab th{text-align:left;font-size:13px;color:var(--muted);font-weight:600;padding:3px 6px 3px 0;white-space:nowrap;
+             background:none;text-transform:none;letter-spacing:0;border:0}
+  .uc-lab tr{border:0} .uc-lab td{border:0}
+  .uc-lab td{padding:3px 0;font-size:14px}
+  .uc-lab td.num{font-weight:700;white-space:nowrap;padding-right:8px}
+  .uc-lab td:last-child{text-align:right;width:124px}
+  .spark{display:inline-block;vertical-align:middle;overflow:visible}
+  .spark-empty{color:var(--faint)}
+  .trend{font-size:12px;font-weight:600;color:var(--muted);margin-left:4px;white-space:nowrap}
+  .pl-state{margin:0 0 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .pl-state>.small{flex-basis:100%}
+  .chip{display:inline-flex;gap:4px;align-items:center;font-size:13px;padding:3px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface-2)}
+  .chip.warn{border-color:#f0dcb3;background:#fdf8ee} .chip.crit{border-color:#ecc9c4;background:#fdf3f1}
+  .feed-note{font-size:12px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis}
+  .uc-issues{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+  .issue{border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;background:var(--surface-2)}
+  .issue.critical{border-color:#ecc9c4;background:#fdf3f1} .issue.warning{border-color:#f0dcb3;background:#fdf8ee}
+  .issue summary{cursor:pointer;font-size:14px;min-height:28px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .issue ul,.plain-list{margin:6px 0 0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+  .plain-list{padding:14px 18px;margin:0}
+  @media (max-width:420px){ .uc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .uc{padding:14px}
+    .uc-lab td:last-child{width:82px} .spark{width:80px;height:20px} .trend{font-size:11px} }
+
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e2a24;color:#fff;
          padding:11px 18px;border-radius:10px;font-size:14px;box-shadow:var(--shadow);z-index:80;opacity:0;transition:.2s;
          pointer-events:none;max-width:calc(100vw - 32px)}   /* invisible toast must never swallow taps */
@@ -193,7 +230,7 @@
   <div class="scrim hidden" id="scrim"></div>
   <aside class="sidebar" id="sidebar">
     <div class="brand" style="font-size:18px;margin:4px 6px 16px"><span class="dot">◉</span> BioGas</div>
-    <button class="nav-item active" data-view="dashboard"><span class="ic">▣</span> Επισκόπηση</button>
+    <button class="nav-item active" data-view="dashboard"><span class="ic">☀</span> Σήμερα</button>
     <button class="nav-item" data-view="samples"><span class="ic">🧪</span> Δείγματα</button>
     <button class="nav-item" data-view="bulk"><span class="ic">⊞</span> Μαζική καταχώρηση</button>
     <button class="nav-item" data-view="production"><span class="ic">⚡</span> Παραγωγή</button>
@@ -448,56 +485,138 @@ function renderNoTenant(){
 }
 
 /* ============================ Dashboard ============================ */
+/* ============================ «Σήμερα» — morning round per digester ============================
+   Operator review Top-10 #4/#5: one card per digester with yesterday's production, the latest
+   feeding (OLR/HRT), the latest lab values with trend arrows and 8-week sparklines, and the
+   active alarms grouped into a diagnosis («πιθανή οξίνιση») instead of one row per signal. */
+const TODAY_LAB = [   // code, short label, decimals
+  ["fos_tac","FOS/TAC",2], ["vfa","VFA",0], ["ph_dig","pH",2], ["nh4","NH₄-N",0], ["ch4","CH₄ εργ.",1], ["h2s","H₂S",0]];
+const SPARK_DAYS = 56;
+// Inline SVG sparkline on a fixed 8-week window so every card shares the time axis. The line is in the
+// de-emphasis ink, the ideal band is a recessive background, the latest point carries the state colour
+// (and the value is printed beside it, so state is never colour-only). Every point has a hover tooltip.
+function sparkline(pts, o={}){
+  const W=120, H=30, P=4;
+  if(!pts || pts.length<2) return `<span class="spark-empty">—</span>`;
+  const now=Date.now(), t0=now-SPARK_DAYS*864e5, vs=pts.map(p=>p.v);
+  let lo=Math.min(...vs), hi=Math.max(...vs);
+  if(o.min!=null) lo=Math.min(lo,o.min); if(o.max!=null) hi=Math.max(hi,o.max);
+  const span=o.minSpan||1e-9;                          // daily readings: don't magnify ±0.1 °C noise
+  if(hi-lo<span){ const m=(hi+lo)/2; hi=m+span/2; lo=m-span/2; }
+  const x=t=>P+(Math.min(Math.max(t,t0),now)-t0)/(now-t0)*(W-2*P), y=v=>H-P-(v-lo)/(hi-lo)*(H-2*P);
+  const band=(o.min!=null||o.max!=null) ? (()=>{ const y1=y(o.max!=null?o.max:hi), y2=y(o.min!=null?o.min:lo);
+    return `<rect x="0" y="${y1.toFixed(1)}" width="${W}" height="${Math.max(y2-y1,1).toFixed(1)}" fill="var(--primary-soft)"/>`; })() : "";
+  const xy=pts.map(p=>[x(p.t),y(p.v)]), last=xy[xy.length-1], fmt=o.fmt||(v=>fmtNum(v));
+  const tips=pts.map((p,i)=>`<circle cx="${xy[i][0].toFixed(1)}" cy="${xy[i][1].toFixed(1)}" r="6" fill="transparent"><title>${fmtDate(new Date(p.t))}: ${esc(fmt(p.v))}${o.unit?" "+esc(o.unit):""}</title></circle>`).join("");
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(o.label||"")}: ${pts.length} τιμές, τελευταία ${esc(fmt(pts[pts.length-1].v))}">${band}`
+    + `<polyline points="${xy.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`
+    + `<circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" fill="${o.color||"var(--ink)"}" stroke="var(--surface)" stroke-width="1.5"/>${tips}</svg>`;
+}
+function trendArrow(cur, prev, decimals){
+  if(cur==null || prev==null) return "";
+  const d=cur-prev, eps=Math.max(Math.abs(prev)*0.01, Math.pow(10,-(decimals||0))/2);
+  const sign=d>0?"+":"", txt=`${sign}${Number(d.toFixed(decimals||0)).toLocaleString("el-GR")}`;
+  return Math.abs(d)<eps ? `<span class="trend flat" title="σταθερό">→</span>` : `<span class="trend" title="${txt} από την προηγούμενη">${d>0?"↑":"↓"} ${txt}</span>`;
+}
+// Same rule as the alarm engine: outside the band = warning, beyond it by > 20 % of the band = critical.
+function rangeState(v,p){
+  if(v==null || !p || (p.ideal_min==null && p.ideal_max==null)) return "na";
+  const lo=p.ideal_min, hi=p.ideal_max; if(!((lo!=null&&v<lo)||(hi!=null&&v>hi))) return "ok";
+  let span=(lo!=null&&hi!=null)?hi-lo:null; if(!(span>0)) span=Math.max(Math.abs(hi??lo),1);
+  return ((lo!=null&&v<lo-0.2*span)||(hi!=null&&v>hi+0.2*span)) ? "crit" : "warn";
+}
+// Group a digester's active alarms into operator diagnoses.
+function diagnose(alerts){
+  const has=re=>alerts.filter(a=>re.test(a.metric||""));
+  const groups=[], used=new Set(), take=(title, list, hint)=>{ if(!list.length) return;
+    list.forEach(a=>used.add(a.id)); groups.push({title, hint, items:list, sev:list.some(a=>a.severity==="critical")?"critical":"warning"}); };
+  const core=has(/^FOS\/TAC|Πτητικά οξέα|^pH/);
+  const acid=has(/^FOS\/TAC|Πτητικά οξέα|^pH|Μεθάνιο|Διοξείδιο|^CH₄ %|^OLR/);
+  if(core.length && acid.length>=2) take("Πιθανή οξίνιση / υπερφόρτωση", acid, "Μείωσε τη φόρτιση, κόψε πρώτα τα εύπεπτα υποστρώματα, πύκνωσε τις μετρήσεις FOS/TAC.");
+  take("Πρόβλημα θέρμανσης", has(/Θερμοκρασία/).filter(a=>!used.has(a.id)), "Έλεγχος λέβητα / εναλλάκτη και κυκλοφορητών.");
+  take("ΣΗΘ: χαμηλή διαθεσιμότητα", has(/Ώρες ΣΗΘ/).filter(a=>!used.has(a.id)), "Αν ήταν προγραμματισμένη στάση, σημείωσέ το στην εγγραφή παραγωγής.");
+  take("Υψηλό H₂S — έλεγχος αποθείωσης", has(/Υδρόθειο/).filter(a=>!used.has(a.id)), "Έλεγχος δόσης αέρα / FeCl₃ και φίλτρου ενεργού άνθρακα.");
+  take("Κίνδυνος αναστολής από αμμωνία", has(/NH₄/).filter(a=>!used.has(a.id)), "Μείωσε υποστρώματα πλούσια σε άζωτο (πουλερικά, χοίρων).");
+  alerts.filter(a=>!used.has(a.id)).forEach(a=>take(a.metric||"Ειδοποίηση", [a]));
+  return groups.sort((a,b)=>(b.sev==="critical")-(a.sev==="critical")||b.items.length-a.items.length);
+}
 async function renderDashboard(){
-  const main=$("#main");
+  const main=$("#main"), T=state.tenantId, today=localDate(), yesterday=daysAgoDate(1);
+  const since=daysAgoDate(SPARK_DAYS);
   main.innerHTML = `<div class="page-head"><div>
-      <h1 class="page-title">Επισκόπηση</h1>
-      <div class="sub">Σύνοψη δραστηριότητας & τιμές εκτός ιδανικού εύρους</div>
+      <h1 class="page-title">Σήμερα</h1>
+      <div class="sub">${new Date().toLocaleDateString("el-GR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} · πρωινός γύρος ανά χωνευτή</div>
     </div></div>
     <div class="stats" id="dash-stats"></div>
-    <div id="dash-alerts"></div>
-    <div class="panel"><h3>Τιμές εκτός ιδανικού (πρόσφατες)</h3><div class="body" id="dash-out"></div></div>
-    <div style="height:16px"></div>
-    <div class="panel"><h3>Πρόσφατα δείγματα</h3><div class="body" id="dash-recent"></div></div>`;
-
-  const T = state.tenantId;
-  const [sTotal, sMonth, uCount, recent, analyses, openAlerts] = await Promise.all([
-    sb.from("samples").select("id",{count:"exact",head:true}).eq("tenant_id",T),
-    sb.from("samples").select("id",{count:"exact",head:true}).eq("tenant_id",T).gte("created_at",monthStart()),
-    sb.from("units").select("id",{count:"exact",head:true}).eq("tenant_id",T),
-    sb.from("samples").select("id,code,kind,status,taken_at,created_at,unit:units(name)").eq("tenant_id",T).order("created_at",{ascending:false}).limit(8),
-    sb.from("analyses").select("value,unit,created_at,parameter:parameters(code,label_el,ideal_min,ideal_max),sample:samples(code,unit:units(name))").eq("tenant_id",T).order("created_at",{ascending:false}).limit(400),
-    sb.from("alerts").select("*,unit:units(name)").eq("tenant_id",T).is("resolved_at",null).order("updated_at",{ascending:false}).limit(50),
+    <div class="today-grid" id="dash-units"><div class="empty">Φόρτωση…</div></div>
+    <div id="dash-plant"></div>`;
+  const [prodQ, feedQ, labQ, alertQ] = await Promise.all([
+    sb.from("production").select("*").eq("tenant_id",T).gte("log_date",since).order("log_date",{ascending:true}).limit(5000),
+    sb.from("feeding_daily").select("*").eq("tenant_id",T).gte("feed_date",since).order("feed_date",{ascending:true}).limit(5000),
+    sb.from("analyses").select("value,measured_at,created_at,parameter:parameters(code,label_el,ideal_min,ideal_max,default_unit),sample:samples(unit_id)")
+      .eq("tenant_id",T).gte("created_at",since).order("created_at",{ascending:true}).limit(5000),
+    sb.from("alerts").select("*,unit:units(name)").eq("tenant_id",T).is("resolved_at",null).order("updated_at",{ascending:false}).limit(200),
   ]);
-  const act=(openAlerts.data||[]).slice().sort((a,b)=>(b.severity==="critical")-(a.severity==="critical")||String(b.updated_at).localeCompare(String(a.updated_at)));
+  if(!$("#dash-units")) return;                       // navigated away meanwhile
+  const prod=prodQ.data||[], feed=feedQ.data||[], lab=labQ.data||[], act=alertQ.data||[];
   const actCrit=act.filter(a=>a.severity==="critical").length;
+  const yProd=prod.filter(r=>r.log_date===yesterday);
+  const yMwh=yProd.reduce((s,r)=>s+(Number(r.kwh_el)||0),0)/1000;
+  const yAvail=yProd.filter(r=>r.chp_hours!=null);
+  $("#dash-stats").innerHTML =
+    statTile("Ηλ. ενέργεια χθες", yProd.length ? yMwh.toFixed(1)+" MWh" : "—")+
+    statTile("Διαθεσιμότητα ΣΗΘ χθες", yAvail.length ? Math.round(yAvail.reduce((s,r)=>s+Number(r.chp_hours),0)/(yAvail.length*24)*100)+"%" : "—")+
+    statTile("Ενεργές ειδοποιήσεις", act.length, actCrit?'var(--high)':(act.length?'var(--warn)':'var(--ok)'))+
+    statTile("Κρίσιμες", actCrit, actCrit?'var(--high)':'var(--ok)');
 
-  const out = (analyses.data||[]).map(a=>({a,st:rangeOf(a.value,a.parameter)})).filter(x=>x.st==="low"||x.st==="high");
-  $("#dash-stats").innerHTML = `
-    ${statTile("Σύνολο δειγμάτων", sTotal.count??0)}
-    ${statTile("Δείγματα τον μήνα", sMonth.count??0)}
-    ${statTile("Μονάδες", uCount.count??0)}
-    ${statTile("Εκτός ιδανικού", out.length, out.length?'var(--high)':'var(--ink)')}
-    ${statTile("Ενεργές ειδοποιήσεις", act.length, actCrit?'var(--high)':(act.length?'var(--warn)':'var(--ok)'))}`;
-  $("#dash-alerts").innerHTML = act.length ? `<div class="panel" style="margin-bottom:16px"><h3 style="display:flex;justify-content:space-between;align-items:center">
-      <span>🔔 Ενεργές ειδοποιήσεις</span><button class="btn ghost sm" onclick="go('alerts')">Όλες →</button></h3>
-      <div class="body">${table(["Σοβαρότητα","Μονάδα","Μήνυμα","Κατάσταση"],
-        act.slice(0,5).map(a=>[sevBadge(a.severity),esc(a.unit?.name||"—"),`<div class="cell-wrap">${esc(a.message||a.metric||"")}</div>`,alertStateBadge(a)]))}</div></div>` : "";
-
-  $("#dash-out").innerHTML = out.length ? table(
-    ["Μονάδα","Δείγμα","Παράμετρος","Τιμή","Κατάσταση"],
-    out.slice(0,12).map(({a,st})=>[
-      esc(a.sample?.unit?.name||"—"), esc(a.sample?.code||"—"),
-      esc(a.parameter?.label_el||a.parameter?.code||"—"),
-      `${esc(a.value)} ${esc(a.unit||"")}`, rangeBadge(st)
-    ])) : `<div class="empty">Καμία τιμή εκτός ιδανικού εύρους 🎉</div>`;
-
-  $("#dash-recent").innerHTML = (recent.data||[]).length ? table(
-    ["Δείγμα","Μονάδα","Τύπος","Κατάσταση","Ημ/νία δειγμ."],
-    recent.data.map(s=>[esc(s.code||"—"),esc(s.unit?.name||"—"),SAMPLE_KIND[s.kind]||s.kind,
-      `<span class="badge st">${STATUS[s.status]||s.status}</span>`,fmtDate(s.taken_at)]),
-    recent.data.map(s=>()=>openSample(s.id))
-  ) : `<div class="empty">Δεν υπάρχουν δείγματα ακόμα.</div>`;
+  const cards=state.units.map(u=>{
+    const P=prod.filter(r=>r.unit_id===u.id), last=P[P.length-1], prevP=P[P.length-2];
+    const F=feed.filter(d=>d.unit_id===u.id), lf=F[F.length-1];
+    const A=act.filter(a=>a.unit_id===u.id), groups=diagnose(A);
+    const sev=A.some(a=>a.severity==="critical")?"crit":A.length?"warn":"ok";
+    const light={crit:["●","Κρίσιμο"],warn:["●","Προσοχή"],ok:["●","Κανονικά"]}[sev];
+    const when=d=>d===yesterday?"χθες":d===today?"σήμερα":fmtDate(d);
+    const kp=(k,v,sub,st)=>`<div class="kp"><div class="k">${k}</div><div class="v"${st?` style="color:${stColor(st)}"`:""}>${v}</div>${sub?`<div class="s">${sub}</div>`:""}</div>`;
+    const ch4St=last&&last.ch4_pct!=null ? (last.ch4_pct<45?"crit":last.ch4_pct<50?"warn":"ok") : null;
+    const chpSt=last&&last.chp_hours!=null&&!last.planned_stop ? (last.chp_hours<16?"crit":last.chp_hours<20?"warn":"ok") : null;
+    const kpis = kp("Ηλ. ενέργεια", last&&last.kwh_el!=null ? (Number(last.kwh_el)/1000).toFixed(1)+" MWh" : "—", last?when(last.log_date):"")
+      + kp("Ώρες ΣΗΘ", last&&last.chp_hours!=null ? fmtNum(last.chp_hours)+" h" : "—", last&&last.planned_stop?"🔧 προγρ. στάση":(last&&Number(last.flare_hours)>0?`πυρσός ${fmtNum(last.flare_hours)} h`:""), chpSt)
+      + kp("CH₄", last&&last.ch4_pct!=null ? fmtNum(last.ch4_pct)+"%" : "—", last&&prevP ? trendArrow(Number(last.ch4_pct),Number(prevP.ch4_pct),1) : "", ch4St)
+      + kp("Θερμοκρασία", last&&last.digester_temp_c!=null ? fmtNum(last.digester_temp_c)+" °C" : "—", last&&prevP&&last.digester_temp_c!=null ? trendArrow(Number(last.digester_temp_c),Number(prevP.digester_temp_c),1) : "ημερήσια ένδειξη")
+      + kp("OLR", lf&&lf.olr!=null ? Number(lf.olr).toFixed(2) : "—", lf?`kg VS/m³·d · ${when(lf.feed_date)}`:"", lf&&lf.olr!=null?olrState(+lf.olr):null)
+      + kp("HRT", lf&&lf.hrt!=null ? Number(lf.hrt).toFixed(0)+" ημ." : "—", lf?`${fmtNum(lf.mass_t)} t/ημ`:"", lf&&lf.hrt!=null?hrtState(+lf.hrt):null);
+    const tsOf=a=>new Date(a.measured_at||a.created_at).getTime();
+    const labRows=TODAY_LAB.map(([code,lbl,dec])=>{
+      const L=lab.filter(a=>a.parameter&&a.parameter.code===code&&a.sample&&a.sample.unit_id===u.id&&a.value!=null).map(a=>({t:tsOf(a),v:Number(a.value),p:a.parameter})).sort((a,b)=>a.t-b.t);
+      if(!L.length) return "";
+      const cur=L[L.length-1], prev=L[L.length-2], st=rangeState(cur.v,cur.p), fmt=v=>Number(v.toFixed(dec)).toLocaleString("el-GR");
+      return `<tr data-code="${code}"><th>${lbl}</th><td class="num"><span style="color:${stColor(st)}">${st==="crit"||st==="warn"?"⚠ ":""}${fmt(cur.v)}</span> ${trendArrow(cur.v,prev&&prev.v,dec)}</td>`
+        + `<td>${sparkline(L,{min:cur.p.ideal_min,max:cur.p.ideal_max,label:lbl,unit:cur.p.default_unit,fmt,color:stColor(st)})}</td></tr>`;
+    }).join("");
+    const dailyRows=[["CH₄ παραγωγής","ch4_pct",1,50,null,"%",8],["Θερμοκρασία","digester_temp_c",1,null,null,"°C",4]].map(([lbl,k,dec,mn,mx,un,minSpan])=>{
+      const L=P.filter(r=>r[k]!=null).map(r=>({t:new Date(r.log_date+"T12:00:00").getTime(),v:Number(r[k])}));
+      return L.length>1 ? `<tr><th>${lbl}</th><td class="num small muted">ημερήσιο</td><td>${sparkline(L,{min:mn,max:mx,minSpan,label:lbl,unit:un,fmt:v=>Number(v.toFixed(dec)).toLocaleString("el-GR")})}</td></tr>` : "";
+    }).join("");
+    const missing=[];
+    if(!P.some(r=>r.log_date===yesterday)) missing.push(`Δεν καταχωρίστηκε παραγωγή για χθες (${fmtDate(yesterday)}).`);
+    if(new Date().getHours()>=10 && !F.some(d=>d.feed_date===today)) missing.push("Δεν έχει καταχωριστεί η σημερινή τροφοδοσία.");
+    const issues=groups.map(g=>`<details class="issue ${g.sev}"><summary>${g.sev==="critical"?"⛔":"⚠"} <b>${esc(g.title)}</b> <span class="muted">· ${g.items.length} ${g.items.length===1?"ένδειξη":"ενδείξεις"}</span></summary>`
+      + (g.hint?`<div class="small" style="margin:6px 0">${esc(g.hint)}</div>`:"")
+      + `<ul>${g.items.map(a=>`<li>${sevBadge(a.severity)} ${esc(a.message||a.metric||"")}</li>`).join("")}</ul></details>`).join("");
+    return `<section class="uc" data-unit="${u.id}"><div class="uc-head"><h2>${esc(u.name)}</h2>
+        <span class="light ${sev}" role="status"><span aria-hidden="true">${light[0]}</span> ${light[1]}</span></div>
+      ${groups.length?`<div class="uc-diag">${groups.slice(0,2).map(g=>`<span class="badge ${g.sev==="critical"?"high":"warnb"}">${esc(g.title)}</span>`).join(" ")}</div>`:""}
+      <div class="uc-kpis">${kpis}</div>
+      ${missing.length?`<div class="hint warn small" style="margin:10px 0 0">${missing.map(esc).join("<br>")}</div>`:""}
+      ${labRows||dailyRows?`<table class="uc-lab"><tbody>${labRows}${dailyRows}</tbody></table><div class="small muted" style="margin-top:2px">Διαγράμματα: τελευταίες 8 εβδομάδες · πράσινη ζώνη = ιδανικό εύρος</div>`:""}
+      <div class="uc-issues">${issues||`<div class="small" style="color:var(--ok)">✓ Καμία ενεργή ειδοποίηση</div>`}</div>
+    </section>`;
+  });
+  $("#dash-units").innerHTML = cards.join("") || `<div class="empty">Πρόσθεσε πρώτα χωνευτές στις «Μονάδες».</div>`;
+  const plant=act.filter(a=>!a.unit_id || !state.units.some(u=>u.id===a.unit_id));
+  $("#dash-plant").innerHTML = plant.length ? `<div class="panel" id="dash-alerts"><h3 style="display:flex;justify-content:space-between;align-items:center">
+      <span>🔔 Γενικές ειδοποιήσεις (χώνευμα, χωρίς χωνευτή)</span><button class="btn ghost sm" onclick="go('alerts')">Όλες →</button></h3>
+      <div class="body"><ul class="plain-list">${plant.map(a=>`<li>${sevBadge(a.severity)} ${esc(a.message||a.metric||"")}</li>`).join("")}</ul></div></div>` : "";
 }
 function statTile(k,v,color){return `<div class="stat"><div class="k">${esc(k)}</div><div class="v" style="color:${color||'var(--ink)'}">${esc(v)}</div></div>`;}
 
@@ -1019,7 +1138,7 @@ async function renderParams(){
   const list=Object.values(byCode).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
   const body=$("#params-body");
   body.innerHTML=list.length ? table(
-    ["Κωδικός","Ετικέτα","Μον. μέτρ.","Ιδανικό min","Ιδανικό max","Πηγή",""],
+    ["Κωδικός","Ετικέτα","Μον. μέτρ.","Ιδανικό min","Ιδανικό max","Συναγερμός τάσης","Πηγή",""],
     list.map(p=>{
       const global=!p.tenant_id;
       const act=!isAdmin()?"":global
@@ -1027,6 +1146,7 @@ async function renderParams(){
         : `<span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn ghost sm" data-edit="${p.id}">✎</button><button class="btn ghost sm danger" data-del="${p.id}">✕</button></span>`;
       return [`<code>${esc(p.code)}</code>`,esc(p.label_el||"—"),esc(p.default_unit||"—"),
         p.ideal_min??"—",p.ideal_max??"—",
+        p.trend_delta!=null&&p.trend_days ? `${p.trend_delta>0?"+":""}${Number(p.trend_delta).toLocaleString("el-GR",{maximumFractionDigits:4})} σε ${p.trend_days} ημ.` : "—",
         global?`<span class="badge st">προεπιλογή</span>`:`<span class="badge ok">δικό σου</span>`, act];
     })
   ) : `<div class="empty">Καμία παράμετρος. Τρέξε το db/seed.sql ή πρόσθεσε νέα.</div>`;
@@ -1057,6 +1177,12 @@ function paramForm(p){
       <div class="field"><label>Ιδανικό max</label><input class="input" id="p-max" type="number" step="any" value="${p?.ideal_max??""}"></div>
       <div class="field"><label>Σειρά</label><input class="input" id="p-sort" type="number" value="${p?.sort_order??100}"></div>
     </div>
+    <div class="fieldset-sep">Συναγερμός τάσης (ρυθμός μεταβολής)</div>
+    <div class="row">
+      <div class="field"><label>Μεταβολή (± μονάδες)</label><input class="input" id="p-tdelta" type="number" step="any" value="${p?.trend_delta??""}" placeholder="π.χ. 0.05 ή -0.2"></div>
+      <div class="field"><label>Μέσα σε (ημέρες)</label><input class="input" id="p-tdays" type="number" min="1" max="90" step="1" value="${p?.trend_days??""}" placeholder="π.χ. 14"></div>
+    </div>
+    <p class="small muted" style="margin-top:-6px">Θετική τιμή = συναγερμός όταν η τιμή <b>ανεβαίνει</b> τόσο μέσα στο διάστημα (π.χ. FOS/TAC +0,05 σε 14 ημ.)· αρνητική = όταν <b>πέφτει</b>. Κρίσιμο στη διπλάσια μεταβολή. Κενό = χωρίς συναγερμό τάσης.</p>
     <p class="small muted">${isEdit?"":"Η παράμετρος αποθηκεύεται για τον τρέχοντα πελάτη."}</p>`;
   modal(isEdit?"Επεξεργασία παραμέτρου":"Νέα παράμετρος", body, async close=>{
     const code=$("#p-code").value.trim(); if(!code)return toast("Ο κωδικός είναι υποχρεωτικός.");
@@ -1065,8 +1191,12 @@ function paramForm(p){
       label_en:$("#p-en").value.trim()||null,
       ideal_min:$("#p-min").value!==""?Number($("#p-min").value):null,
       ideal_max:$("#p-max").value!==""?Number($("#p-max").value):null,
-      sort_order:Number($("#p-sort").value)||100
+      sort_order:Number($("#p-sort").value)||100,
+      trend_delta:$("#p-tdelta").value!==""&&Number($("#p-tdelta").value)!==0?Number($("#p-tdelta").value):null,
+      trend_days:$("#p-tdays").value!==""?Math.round(Number($("#p-tdays").value)):null
     };
+    if((payload.trend_delta==null)!==(payload.trend_days==null)) return toast("Για συναγερμό τάσης συμπλήρωσε και τη μεταβολή και τις ημέρες.");
+    if(payload.trend_days!=null && (payload.trend_days<1||payload.trend_days>90)) return toast("Οι ημέρες τάσης πρέπει να είναι 1–90.");
     const { error } = isEdit
       ? await sb.from("parameters").update(payload).eq("id",p.id)
       : await sb.from("parameters").insert({...payload,tenant_id:state.tenantId});
@@ -1372,10 +1502,10 @@ async function loadProduction(){
     statTile("Ειδική απόδοση", spec!=null?spec.toFixed(0)+" m³/t":"—")+
     statTile("Τροφοδοσία", feed.toFixed(1)+" t");
   body.innerHTML=rows.length? table(
-    ["Ημ/νία","Μονάδα","Τροφ. (t)","Βιοαέριο (m³)","CH₄ %","kWh el","Ώρες ΣΗΘ","Ώρες πυρσού",""],
-    rows.map(r=>[fmtDate(r.log_date),esc(r.unit?.name||"—"),fmtNum(r.feedstock_t),fmtNum(r.biogas_m3),
+    ["Ημ/νία","Μονάδα","Τροφ. (t)","Βιοαέριο (m³)","CH₄ %","kWh el","Ώρες ΣΗΘ","Ώρες πυρσού","°C",""],
+    rows.map(r=>[fmtDate(r.log_date)+(r.notes?` <span title="${esc(r.notes)}" aria-label="Σημείωση: ${esc(r.notes)}">📝</span>`:""),esc(r.unit?.name||"—"),fmtNum(r.feedstock_t),fmtNum(r.biogas_m3),
       r.ch4_pct!=null?`<span class="badge ${r.ch4_pct<50?'high':'ok'}">${r.ch4_pct}</span>`:"—",
-      fmtNum(r.kwh_el),fmtNum(r.chp_hours),fmtNum(r.flare_hours),
+      fmtNum(r.kwh_el),fmtNum(r.chp_hours)+(r.planned_stop?` <span class="badge st" title="Προγραμματισμένη στάση">🔧</span>`:""),fmtNum(r.flare_hours),fmtNum(r.digester_temp_c),
       canWrite()?`<span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn ghost sm" data-edit="${r.id}">✎</button><button class="btn ghost sm danger" data-del="${r.id}">✕</button></span>`:""])
   ) : `<div class="empty">Καμία εγγραφή για ${esc(m)}. ${canWrite()?"Πάτησε «Εγγραφή».":""}</div>`;
   rows.forEach(r=>{
@@ -1399,6 +1529,7 @@ function validateProduction(p){
   if(p.ch4_pct!=null && (p.ch4_pct<0||p.ch4_pct>100)) err.push(`CH₄ ${fmtNum(p.ch4_pct)}%: πρέπει να είναι 0–100 %.`);
   if(p.chp_hours!=null && (p.chp_hours<0||p.chp_hours>24)) err.push(`Ώρες ΣΗΘ ${fmtNum(p.chp_hours)}: πρέπει να είναι 0–24.`);
   if(p.flare_hours!=null && (p.flare_hours<0||p.flare_hours>24)) err.push(`Ώρες πυρσού ${fmtNum(p.flare_hours)}: πρέπει να είναι 0–24.`);
+  if(p.digester_temp_c!=null && (p.digester_temp_c<0||p.digester_temp_c>80)) err.push(`Θερμοκρασία ${fmtNum(p.digester_temp_c)} °C: πρέπει να είναι 0–80.`);
   const cap=Number(u&&u.capacity_kw)||0;
   if(cap>0 && p.kwh_el!=null && p.kwh_el>cap*24*1.05)
     err.push(`kWh ηλεκτρ. ${fmtNum(p.kwh_el)}: πάνω από το μέγιστο δυνατό της ΣΗΘ (${fmtNum(cap)} kWel × 24 h ≈ ${fmtNum(Math.round(cap*24))} kWh).`);
@@ -1428,6 +1559,11 @@ function productionForm(r){
       <div class="field"><label>Ώρες ΣΗΘ</label>${numIn("prf-h",r?.chp_hours,0,24)}</div>
       <div class="field"><label>Ώρες πυρσού</label>${numIn("prf-flare",r?.flare_hours,0,24)}</div>
     </div>
+    <div class="row">
+      <div class="field"><label>Θερμοκρασία χωνευτή (°C)</label>${numIn("prf-temp",r?.digester_temp_c,0,80)}</div>
+      <div class="field" style="justify-content:flex-end"><label class="small" style="display:flex;gap:8px;align-items:center;min-height:44px">
+        <input type="checkbox" id="prf-planned" ${r?.planned_stop?"checked":""}> 🔧 Προγραμματισμένη στάση ΣΗΘ (συντήρηση — χωρίς συναγερμό)</label></div>
+    </div>
     <div class="field"><label>Σημειώσεις</label><textarea class="input" id="prf-notes" rows="2">${esc(r?.notes||"")}</textarea></div>
     <p class="small muted" style="margin:0">Μία εγγραφή ανά χωνευτή και ημέρα. Προεπιλογή: η χθεσινή ημέρα.</p>`;
   modal(isEdit?"Επεξεργασία εγγραφής":"Νέα εγγραφή παραγωγής", body, async close=>{
@@ -1435,6 +1571,7 @@ function productionForm(r){
     const payload={log_date:$("#prf-date").value||null, unit_id:$("#prf-u").value||null,
       feedstock_t:num("#prf-feed"),biogas_m3:num("#prf-gas"),ch4_pct:num("#prf-ch4"),
       kwh_el:num("#prf-el"),kwh_th:num("#prf-th"),chp_hours:num("#prf-h"),flare_hours:num("#prf-flare"),
+      digester_temp_c:num("#prf-temp"), planned_stop:$("#prf-planned").checked,
       notes:$("#prf-notes").value.trim()||null};
     const err=validateProduction(payload);
     if(err.length){ $("#prf-msg").innerHTML=`<div class="msg err">${err.map(esc).join("<br>")}</div>`; return; }
@@ -1456,7 +1593,7 @@ function productionForm(r){
       : await sb.from("production").insert({...payload,tenant_id:state.tenantId,created_by:state.profile.id});
     if(error){
       const m = error.code==="23505" ? "Υπάρχει ήδη εγγραφή για αυτόν τον χωνευτή και ημέρα."
-              : error.code==="23514" ? "Τιμή εκτός φυσικών ορίων (CH₄ 0–100 %, ώρες 0–24, όχι αρνητικά)."
+              : error.code==="23514" ? "Τιμή εκτός φυσικών ορίων (CH₄ 0–100 %, ώρες 0–24, θερμοκρασία 0–80 °C, όχι αρνητικά)."
               : "Σφάλμα: "+error.message;
       $("#prf-msg").innerHTML=`<div class="msg err">${esc(m)}</div>`; return;
     }
@@ -1470,7 +1607,7 @@ function exportProductionXlsx(){
   if(!window.XLSX) return toast("Το Excel library δεν φόρτωσε.");
   const rows=state._prod.rows.map(r=>({Ημερομηνία:r.log_date,Μονάδα:r.unit?.name||"",
     "Τροφοδοσία (t)":r.feedstock_t,"Βιοαέριο (m³)":r.biogas_m3,"CH4 %":r.ch4_pct,
-    "kWh el":r.kwh_el,"kWh th":r.kwh_th,"Ώρες ΣΗΘ":r.chp_hours,"Ώρες πυρσού":r.flare_hours,Σημειώσεις:r.notes||""}));
+    "kWh el":r.kwh_el,"kWh th":r.kwh_th,"Ώρες ΣΗΘ":r.chp_hours,"Ώρες πυρσού":r.flare_hours,"Θερμοκρασία °C":r.digester_temp_c,"Προγρ. στάση":r.planned_stop?"ναι":"",Σημειώσεις:r.notes||""}));
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Παραγωγή");
   XLSX.writeFile(wb,`Παραγωγή_${state._prod.month}.xlsx`); toast("Excel κατέβηκε");
 }
@@ -1609,10 +1746,12 @@ async function renderFeeding(){
           ${canWrite()?`<button class="btn ghost sm danger hidden" id="pl-recipe-del" title="Διαγραφή συνταγής">🗑</button>`:""}</div></div>
       </div>
       <div id="pl-unitinfo" class="small muted" style="margin:-4px 0 4px"></div>
+      <div id="pl-state" class="pl-state"></div>
       <div id="pl-basis" class="small muted" style="margin:0 0 10px"></div>
       <div id="pl-lines"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center">
         <button class="btn sm" id="pl-add">＋ Υπόστρωμα</button>
+        ${canWrite()?`<input class="input" id="pl-note" maxlength="500" placeholder="Αιτία / σημείωση αλλαγής (π.χ. κόψιμο λόγω FOS/TAC)" style="flex:2;min-width:220px">`:""}
         <div class="spacer"></div>
         ${canWrite()?`<button class="btn sm" id="pl-save-recipe">💾 Αποθήκευση συνταγής</button>
         <button class="btn primary" id="pl-commit">✔ Καταχώρηση τροφοδοσίας</button>`:""}
@@ -1631,8 +1770,10 @@ async function renderFeeding(){
   $("#fl-month").value=FL.month;
   // Switching digester must never keep the other digester's ration: OLR/HRT would be computed on the
   // wrong lines and «Καταχώρηση» would book them on this digester (operator review §9.1).
-  pu.onchange=async()=>{ P.unit_id=pu.value; P.lines=[]; P.recipe_id=""; renderRecipeSelect();
-    await loadLatestFeedingAsBasis(); drawLines(); loadPrev(); };
+  pu.onchange=async()=>{ P.unit_id=pu.value; P.lines=[]; P.recipe_id=""; P.note=""; renderRecipeSelect();
+    const n=$("#pl-note"); if(n) n.value="";
+    loadUnitState(); await loadLatestFeedingAsBasis(); drawLines(); loadPrev(); };
+  const noteIn=$("#pl-note"); if(noteIn){ noteIn.value=P.note||""; noteIn.oninput=()=>{ P.note=noteIn.value; }; }
   $("#pl-date").onchange=e=>{ P.date=e.target.value; loadPrev(); };
   $("#pl-add").onclick=()=>{ P.lines.push({feedstock_id:(state.feedstocks[0]||{}).id||"", mass_t:""}); drawLines();
     const ins=$$("#pl-lines .pl-mass"); if(ins.length) ins[ins.length-1].focus(); };
@@ -1641,7 +1782,7 @@ async function renderFeeding(){
   if(canWrite()){ $("#pl-save-recipe").onclick=saveRecipeForm; $("#pl-commit").onclick=commitFeeding; }
   await loadRecipes(); renderRecipeSelect();
   if(!P.lines.length && P.unit_id) await loadLatestFeedingAsBasis();
-  drawLines(); loadPrev(); loadFeedingLog();
+  loadUnitState(); drawLines(); loadPrev(); loadFeedingLog();
 }
 // Start the planner from the plant's most recent feeding (the usual case: small daily adjustments).
 async function loadLatestFeedingAsBasis(){
@@ -1658,6 +1799,37 @@ async function loadLatestFeedingAsBasis(){
   P.lines=(data||[]).map(r=>({feedstock_id:r.feedstock_id, mass_t:r.mass_t}));
   if(info()) info().textContent=`Βάση: τροφοδοσία «${unitName(unit)}» ${fmtDate(last[0].feed_date)} — προσάρμοσε και καταχώρισε για την επιλεγμένη ημέρα.`;
 }
+// Digester state next to OLR/HRT (operator review Top-10 #6): latest FOS/TAC, VFA, pH with trend
+// arrows and the open stability alarms. An unstable digester changes the planner's advice.
+const STABILITY_CODES=[["fos_tac","FOS/TAC",2],["vfa","VFA",0],["ph_dig","pH",2]];
+async function loadUnitState(){
+  const P=state.planner, unit=P.unit_id, box=$("#pl-state"); P.stab=null;
+  if(!unit){ if(box) box.innerHTML=""; return; }
+  const since=daysAgoDate(60);
+  const [{ data:an }, { data:al }] = await Promise.all([
+    sb.from("analyses").select("value,measured_at,created_at,parameter:parameters(code,ideal_min,ideal_max),sample:samples(unit_id)")
+      .eq("tenant_id",state.tenantId).gte("created_at",since).order("created_at",{ascending:true}).limit(3000),
+    sb.from("alerts").select("metric,severity,message").eq("tenant_id",state.tenantId).eq("unit_id",unit).is("resolved_at",null).limit(100)]);
+  if(P.unit_id!==unit) return;
+  const chips=[], bad=[];
+  STABILITY_CODES.forEach(([code,lbl,dec])=>{
+    const L=(an||[]).filter(a=>a.parameter&&a.parameter.code===code&&a.sample&&a.sample.unit_id===unit&&a.value!=null)
+      .sort((a,b)=>String(a.measured_at||a.created_at).localeCompare(String(b.measured_at||b.created_at)));
+    if(!L.length) return;
+    const cur=L[L.length-1], prev=L[L.length-2], v=Number(cur.value), st=rangeState(v,cur.parameter);
+    if(st==="warn"||st==="crit") bad.push(lbl);
+    chips.push(`<span class="chip ${st}">${lbl} <b>${Number(v.toFixed(dec)).toLocaleString("el-GR")}</b>${trendArrow(v,prev&&Number(prev.value),dec)} <span class="muted">· ${fmtDate(cur.measured_at||cur.created_at)}</span></span>`);
+  });
+  const stab=(al||[]).filter(a=>/^FOS\/TAC|Πτητικά οξέα|^pH|^CH₄ % \(τάση\)/.test(a.metric||""));
+  stab.forEach(a=>{ if(/τάση/.test(a.metric) && !bad.includes(a.metric)) bad.push(a.metric); });
+  P.stab={unstable:bad.length>0, reasons:bad};
+  if(box) box.innerHTML = chips.length||stab.length
+    ? `<div class="small muted" style="margin-bottom:4px">Κατάσταση χωνευτή (τελευταίες αναλύσεις):</div>${chips.join(" ")}`
+      + (P.stab.unstable?` <span class="badge high">Ασταθής: ${esc(bad.join(", "))}</span>`:` <span class="badge ok">Σταθερός</span>`)
+    : `<span class="small muted">Χωρίς πρόσφατες αναλύσεις σταθερότητας για αυτόν τον χωνευτή.</span>`;
+  updatePlannerCalc();
+}
+const fsEasy = f => f && ["food_waste","agro_industrial"].includes(f.category);   // fast-acidifying substrates
 function drawLines(){
   const P=state.planner, box=$("#pl-lines"); if(!box) return;
   P.lines.forEach(l=>{ if(!l.feedstock_id && state.feedstocks[0]) l.feedstock_id=state.feedstocks[0].id; });
@@ -1714,7 +1886,7 @@ function updatePlannerCalc(){
     statTile("Κάλυψη ΣΗΘ", k.cover!=null ? Math.round(k.cover)+"%" : "—", stColor(vs))+
     statTile("Κόστος", k.cost>=0 ? fmtNum(Math.round(k.cost))+" €/ημ" : "έσοδο "+fmtNum(Math.round(-k.cost))+" €", k.cost<0?"var(--ok)":"var(--ink)")+
     statTile("≈ C:N μίγματος", k.cn!=null ? k.cn.toFixed(0) : "—", stColor(cs));
-  const w=[];
+  const w=[], notes=[];
   if(k.mass>0){
     if(os==="crit"||os==="warn") w.push(`<b>Υψηλό οργανικό φορτίο (OLR ${k.olr.toFixed(2)})</b> — πάνω από 4 kg VS/m³·d υπάρχει κίνδυνος υπερφόρτωσης και οξίνισης. Αύξησε τη φόρτιση σταδιακά (≤10%/εβδομάδα) και παρακολούθησε FOS/TAC.`);
     if(os==="low") w.push(`<b>Χαμηλό OLR (${k.olr.toFixed(2)})</b> — ο χωνευτής υποαξιοποιείται.`);
@@ -1724,12 +1896,25 @@ function updatePlannerCalc(){
     if(vs==="warn" && k.cover<90) w.push(`Η συνταγή καλύπτει <b>~${Math.round(k.cover)}%</b> του πλήρους φορτίου ΣΗΘ.`
       + (os==="warn"||os==="crit" ? ` Ο όγκος του χωνευτή είναι ο περιοριστικός παράγοντας — προτίμησε υποστρώματα με υψηλότερη απόδοση ανά τόνο VS αντί για περισσότερη μάζα.` : ""));
     if(vs==="warn" && k.cover>110) w.push(`Πλεόνασμα αερίου <b>~${Math.round(k.cover-100)}%</b> πάνω από την ισχύ ΣΗΘ — πιθανή καύση σε πυρσό.`);
-    if(P.prev && P.prev.vs>0){ const ch=(k.vs-P.prev.vs)/P.prev.vs*100;
-      if(Math.abs(ch)>10) w.push(`<b>Απότομη μεταβολή φόρτισης (${ch>0?"+":""}${ch.toFixed(0)}% VS έναντι ${fmtDate(P.prev.date)})</b> — συστήνεται σταδιακή αλλαγή του σιτηρεσίου.`); }
+    if(P.prev && P.prev.vs>0){ const ch=(k.vs-P.prev.vs)/P.prev.vs*100, unstable=!!(P.stab&&P.stab.unstable);
+      const pct=`${ch>0?"+":""}${ch.toFixed(0)}% VS έναντι ${fmtDate(P.prev.date)}`;
+      if(ch>10) w.push(unstable
+        ? `<b>Αύξηση φόρτισης (${pct}) σε ασταθή χωνευτή</b> (${esc(P.stab.reasons.join(", "))}). Μην αυξάνεις πριν σταθεροποιηθούν FOS/TAC και VFA.`
+        : `<b>Απότομη αύξηση φόρτισης (${pct})</b> — συστήνεται σταδιακή αύξηση (≤10%/εβδομάδα) με παρακολούθηση FOS/TAC.`);
+      if(ch<-10){
+        if(unstable){
+          const easy=P.lines.map((l,i)=>({f:state.feedstockById[l.feedstock_id], c:(k.per[i]||{}).c||0})).filter(x=>fsEasy(x.f)&&x.c>0).sort((a,b)=>b.c-a.c);
+          notes.push(`✓ <b>Μείωση φόρτισης (${pct})</b> — σωστή κίνηση για ασταθή χωνευτή (${esc(P.stab.reasons.join(", "))}). `
+            + (easy.length ? `Κόψε πρώτα τα εύπεπτα / γρήγορα οξινιζόμενα: <b>${easy.map(x=>esc(x.f.name)).join(", ")}</b>. ` : "")
+            + `Κράτα σταθερή την κοπριά (ρυθμιστική ικανότητα) και μέτρα FOS/TAC κάθε 2–3 ημέρες.`);
+        } else notes.push(`Μείωση φόρτισης (${pct}): η παραγωγή αερίου θα πέσει αναλογικά. Γράψε την αιτία στο πεδίο σημείωσης.`);
+      }
+    }
   }
   $("#pl-warn").innerHTML = !k.mass ? "" : (w.length
     ? `<div class="hint warn">⚠ <b>Παρατηρήσεις</b><ul>${w.map(x=>`<li>${x}</li>`).join("")}</ul></div>`
-    : `<div class="hint ok">✓ Η συνταγή είναι εντός των συνιστώμενων ορίων (OLR 1.5–4 kg VS/m³·d, HRT ≥ 20 ημ., C:N 15–35).</div>`);
+    : `<div class="hint ok">✓ Η συνταγή είναι εντός των συνιστώμενων ορίων (OLR 1.5–4 kg VS/m³·d, HRT ≥ 20 ημ., C:N 15–35).</div>`)
+    + (k.mass && notes.length ? `<div class="hint info" id="pl-info">${notes.join("<br>")}</div>` : "");
 }
 async function loadPrev(){
   const P=state.planner; P.prev=null;
@@ -1793,6 +1978,11 @@ async function commitFeeding(){
     p_items:lines.map(l=>({feedstock_id:l.feedstock_id, mass_t:Number(l.mass_t)}))});
   if(btn) btn.disabled=false;
   if(error) return toast("Σφάλμα: "+error.message);
+  // reason / note of the day (one per digester and day): replace whatever was there
+  const note=(P.note||"").trim();
+  await sb.from("feeding_notes").delete().eq("tenant_id",T).eq("unit_id",P.unit_id).eq("feed_date",P.date);
+  if(note){ const { error:ne } = await sb.from("feeding_notes").insert({tenant_id:T, unit_id:P.unit_id, feed_date:P.date, note, created_by:state.profile.id});
+    if(ne) toast("Η τροφοδοσία καταχωρήθηκε, αλλά όχι η σημείωση: "+ne.message); }
   toast(`Καταχωρήθηκε η τροφοδοσία ${fmtDate(P.date)} — ${data} υποστρώματα`);
   state.feedLog.month=P.date.slice(0,7); const fm=$("#fl-month"); if(fm) fm.value=state.feedLog.month;
   refreshAlertBadge(); loadFeedingLog(); loadPrev();
@@ -1803,7 +1993,10 @@ async function loadFeedingLog(){
   let q=sb.from("feeding_daily").select("*").eq("tenant_id",T).gte("feed_date",from).lt("feed_date",to).order("feed_date",{ascending:false}).limit(1000);
   let pq=sb.from("production").select("unit_id,log_date,biogas_m3,ch4_pct").eq("tenant_id",T).gte("log_date",from).lt("log_date",to).limit(2000);
   if(FL.unit){ q=q.eq("unit_id",FL.unit); pq=pq.eq("unit_id",FL.unit); }
-  const [{ data:days, error }, { data:prod }] = await Promise.all([q,pq]);
+  let nq=sb.from("feeding_notes").select("unit_id,feed_date,note").eq("tenant_id",T).gte("feed_date",from).lt("feed_date",to).limit(2000);
+  if(FL.unit) nq=nq.eq("unit_id",FL.unit);
+  const [{ data:days, error }, { data:prod }, { data:notes }] = await Promise.all([q,pq,nq]);
+  const nm={}; (notes||[]).forEach(n=>{ nm[n.unit_id+"|"+n.feed_date]=n.note; });
   if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
   const pm={}; (prod||[]).forEach(p=>{ pm[p.unit_id+"|"+p.log_date]=p; });
   const rows=(days||[]).slice().sort((a,b)=>String(b.feed_date).localeCompare(String(a.feed_date))||unitName(a.unit_id).localeCompare(unitName(b.unit_id),"el"));
@@ -1813,7 +2006,8 @@ async function loadFeedingLog(){
       const p=pm[d.unit_id+"|"+d.feed_date];
       const act=(p && p.biogas_m3!=null && p.ch4_pct!=null) ? p.biogas_m3*p.ch4_pct/100 : null;
       const eff=(act!=null && Number(d.ch4_expected_m3)>0) ? act/Number(d.ch4_expected_m3)*100 : null;
-      return [fmtDate(d.feed_date), esc(unitName(d.unit_id)), fmtNum(d.mass_t), Number(d.vs_t).toFixed(2),
+      const note=nm[d.unit_id+"|"+d.feed_date];
+      return [fmtDate(d.feed_date)+(note?`<div class="feed-note" title="${esc(note)}">📝 ${esc(note.length>48?note.slice(0,47)+"…":note)}</div>`:""), esc(unitName(d.unit_id)), fmtNum(d.mass_t), Number(d.vs_t).toFixed(2),
         d.olr!=null ? stBadge(olrState(+d.olr),Number(d.olr).toFixed(2)) : "—",
         d.hrt!=null ? stBadge(hrtState(+d.hrt),Number(d.hrt).toFixed(0)) : "—",
         fmtNum(Math.round(d.ch4_expected_m3)), act!=null ? fmtNum(Math.round(act)) : "—",
@@ -1830,9 +2024,12 @@ async function loadFeedingLog(){
 async function openFeedingDay(unit,date){
   const { data, error } = await sb.from("feeding").select("feedstock_id,mass_t").eq("tenant_id",state.tenantId).eq("unit_id",unit).eq("feed_date",date);
   if(error) return toast("Σφάλμα: "+error.message);
-  const P=state.planner; P.unit_id=unit; P.date=date; P.recipe_id="";
+  const P=state.planner, prevUnit=P.unit_id; P.unit_id=unit; P.date=date; P.recipe_id="";
   P.lines=(data||[]).map(r=>({feedstock_id:r.feedstock_id, mass_t:r.mass_t}));
+  const { data:nt } = await sb.from("feeding_notes").select("note").eq("tenant_id",state.tenantId).eq("unit_id",unit).eq("feed_date",date).limit(1);
+  P.note=(nt&&nt[0]&&nt[0].note)||""; const ni=$("#pl-note"); if(ni) ni.value=P.note;
   $("#pl-unit").value=unit; $("#pl-date").value=date; renderRecipeSelect(); drawLines(); loadPrev();
+  if(prevUnit!==unit) loadUnitState();
   const m=$("#main"); if(m) m.scrollTop=0; window.scrollTo({top:0,behavior:"smooth"});
   toast(`Φορτώθηκε η τροφοδοσία ${fmtDate(date)} — ${unitName(unit)}`);
 }
@@ -2599,7 +2796,7 @@ window.go=go; window.state=state;   // used by inline back button
    render code stays untouched. Dynamic/interpolated values stay as-is. */
 const I18N = {
   // nav / chrome
-  "Επισκόπηση":"Overview","Δείγματα":"Samples","Μαζική καταχώρηση":"Bulk entry",
+  "Επισκόπηση":"Overview","Σήμερα":"Today","Δείγματα":"Samples","Μαζική καταχώρηση":"Bulk entry",
   "Reports":"Reports","Διαχείριση":"Management","Μονάδες":"Units","Παράμετροι":"Parameters",
   "Οικονομικά":"Financials","Χρήστες":"Users","Αρχείο ενεργειών":"Audit log",
   "Ρυθμίσεις πελάτη":"Client settings","Ασφάλεια":"Security","Αποσύνδεση":"Sign out",
@@ -2705,6 +2902,16 @@ const I18N = {
   "🔔 Ενεργές ειδοποιήσεις":"🔔 Active alerts","Όλες →":"All →",
   // production log (operator-review fixes)
   "Ώρες πυρσού":"Flare hours",
+  // «Σήμερα» / trends (Phase 11)
+  "Ηλ. ενέργεια χθες":"Electricity yesterday","Διαθεσιμότητα ΣΗΘ χθες":"CHP availability yesterday","Κρίσιμες":"Critical",
+  "Κανονικά":"Normal","Προσοχή":"Attention","Κρίσιμο":"Critical","Ηλ. ενέργεια":"Electricity","Θερμοκρασία":"Temperature",
+  "ημερήσιο":"daily","ημερήσια ένδειξη":"daily reading","CH₄ παραγωγής":"CH₄ (production)","CH₄ εργ.":"CH₄ (lab)",
+  "Πιθανή οξίνιση / υπερφόρτωση":"Possible acidification / overload","Πρόβλημα θέρμανσης":"Heating problem",
+  "ΣΗΘ: χαμηλή διαθεσιμότητα":"CHP: low availability","Υψηλό H₂S — έλεγχος αποθείωσης":"High H₂S — check desulphurisation",
+  "Κίνδυνος αναστολής από αμμωνία":"Ammonia inhibition risk","✓ Καμία ενεργή ειδοποίηση":"✓ No active alerts",
+  "Σταθερός":"Stable","Θερμοκρασία χωνευτή (°C)":"Digester temperature (°C)","Συναγερμός τάσης":"Trend alarm",
+  "Συναγερμός τάσης (ρυθμός μεταβολής)":"Trend alarm (rate of change)","Μεταβολή (± μονάδες)":"Change (± units)","Μέσα σε (ημέρες)":"Within (days)",
+  "Αιτία / σημείωση αλλαγής (π.χ. κόψιμο λόγω FOS/TAC)":"Reason / note for the change (e.g. cut due to FOS/TAC)",
   "Μία εγγραφή ανά χωνευτή και ημέρα. Προεπιλογή: η χθεσινή ημέρα.":"One log per digester and day. Default: yesterday.",
   // mass & energy balance
   "Ισοζύγιο":"Balance","Ισοζύγιο μάζας & ενέργειας":"Mass & energy balance","Ροή μάζας":"Mass flow",

@@ -27,6 +27,10 @@ insert into public.parameters (tenant_id, code, label_el, label_en, default_unit
   (null, 'dig_p2o5', 'Φώσφορος χωνεύματος (P₂O₅)',  'Digestate P₂O₅',    'kg/t',  null, null, 130),
   (null, 'dig_k2o',  'Κάλιο χωνεύματος (K₂O)',      'Digestate K₂O',     'kg/t',  null, null, 140)
 on conflict (tenant_id, code) do nothing;
+-- Trend (rate-of-change) alarm: FOS/TAC rising +0.05 within 14 days warns
+-- before the absolute limit is crossed (migration 0011, operator review §8).
+update public.parameters set trend_delta = 0.05, trend_days = 14
+ where tenant_id is null and code = 'fos_tac' and trend_delta is null and trend_days is null;
 
 -- ---------------------------------------------------------------------------
 -- Feedstock registry: TS % (fresh), VS % (of TS), BMP m³ CH₄ / t VS,

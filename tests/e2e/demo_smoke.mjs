@@ -28,11 +28,22 @@ const badge = () => page.$eval("#alert-badge", b => b.classList.contains("hidden
 await page.goto(URL, { waitUntil: "load" });
 await sleep(1200);
 
-console.log("Dashboard");
+console.log("Σήμερα (dashboard)");
 const dashTiles = await page.$$eval(".stat", s => s.map(x => [x.querySelector(".k").textContent, x.querySelector(".v").textContent]));
 const activeTile = dashTiles.find(t => t[0] === "Ενεργές ειδοποιήσεις");
 check(activeTile && Number(activeTile[1]) === (await openAlerts()).length, `alarm tile matches open alarms (${activeTile && activeTile[1]})`);
-check((await page.$$("#dash-alerts tbody tr")).length === 5, "dashboard lists the top 5 active alarms");
+check(!dashTiles.some(t => /δειγμάτων|Δείγματα τον μήνα/.test(t[0])), "lab sample-count tiles removed");
+check(/MWh/.test((dashTiles.find(t => t[0] === "Ηλ. ενέργεια χθες") || [])[1] || ""), "yesterday's MWh on top");
+check((await page.$$("#dash-units .uc")).length === 2, "one card per digester");
+const card = u => `#dash-units .uc[data-unit="${u}"]`;
+check(/Κανονικά/.test(await page.textContent(`${card("un1")} .light`)) && /Κρίσιμο/.test(await page.textContent(`${card("un2")} .light`)),
+  "traffic light per digester (Χ1 normal, Χ2 critical) with a text label");
+const acid = await page.$eval(`${card("un2")} .uc-issues`, e => { const d = [...e.querySelectorAll("details")].find(x => /οξίνιση/.test(x.textContent));
+  return d ? d.querySelectorAll("li").length : 0; });
+check(acid >= 5, `Χ2 acidification signals grouped into one diagnosis (${acid} ενδείξεις)`);
+check((await page.$$(`${card("un2")} svg.spark`)).length >= 6, "8-week sparklines per digester");
+check(/↑/.test(await page.textContent(`${card("un2")} tr[data-code="fos_tac"]`)), "FOS/TAC shows a rising-trend arrow");
+check(/kg N\/ha/.test(await page.textContent("#dash-plant")), "plant-wide alarms (digestate N) listed separately");
 check((await badge()) > 0, `nav badge shows unacknowledged alarms (${await badge()})`);
 await shot("1-dashboard");
 
@@ -275,6 +286,59 @@ check(!!(await page.$("#units-body [data-del]")), "admin keeps digester manageme
 // (7) an invisible toast never swallows taps
 check((await page.$eval("#toast", t => getComputedStyle(t).pointerEvents)) === "none", "toast has pointer-events:none");
 await shot("9-production-form");
+
+console.log("Wave A — trends, state-aware planner, daily readings");
+const allAlerts = () => db(() => window.__BIOGAS_DEMO_DB__.alerts);
+{
+  const A = await allAlerts();
+  const trend = A.find(a => a.unit_id === "un2" && a.metric === "FOS/TAC (τάση)");
+  const abs = A.find(a => a.unit_id === "un2" && a.metric === "FOS/TAC");
+  check(!!trend && !trend.resolved_at, "FOS/TAC trend alarm open on Χ2");
+  check(trend && abs && trend.created_at < abs.created_at,
+    `trend alarm came before the absolute one (${trend && trend.created_at.slice(0, 10)} < ${abs && abs.created_at.slice(0, 10)})`);
+  check(A.some(a => a.unit_id === "un2" && a.metric === "CH₄ % (τάση)" && !a.resolved_at), "falling-CH₄ (3 days) alarm on Χ2");
+  check(!A.some(a => a.unit_id === "un1" && a.metric === "Ώρες ΣΗΘ"), "planned CHP maintenance on Χ1 raised no availability alarm");
+}
+await go("feeding");
+await page.selectOption("#pl-unit", "un2");
+await waitFor(async () => /Ασταθής/.test(await page.textContent("#pl-state")));
+check(/Ασταθής/.test(await page.textContent("#pl-state")) && /FOS\/TAC/.test(await page.textContent("#pl-state")), "planner shows Χ2 is unstable next to OLR/HRT");
+await waitFor(async () => (await page.$$("#pl-lines .pl-mass")).length > 0);
+for (const el of await page.$$("#pl-lines .pl-mass")) { const v = Number(await el.inputValue()); await el.fill(String(Math.round(v * 0.6 * 10) / 10)); }
+await sleep(300);
+const planInfo = (await page.$("#pl-info")) ? await page.textContent("#pl-info") : "";
+check(/σωστή κίνηση/.test(planInfo) && !/σταδιακή/.test(await page.textContent("#pl-warn")), "cutting an unstable digester is endorsed, not warned against");
+check(/εύπεπτα/.test(planInfo), "planner suggests cutting the fast-acidifying substrates first");
+await page.fill("#pl-note", "Κόψιμο 40% λόγω FOS/TAC 0,55");
+await page.click("#pl-commit");
+await waitFor(async () => (await db(() => window.__BIOGAS_DEMO_DB__.feeding_notes.filter(n => n.unit_id === "un2").length)) >= 3);
+const today2 = await page.$eval("#pl-date", d => d.value);
+check(await db(t => (window.__BIOGAS_DEMO_DB__.feeding_notes.find(n => n.unit_id === "un2" && n.feed_date === t) || {}).note === "Κόψιμο 40% λόγω FOS/TAC 0,55", today2),
+  "the reason for the change is stored with the feeding day");
+await waitFor(async () => /Κόψιμο 40%/.test(await page.textContent("#fl-body")));
+check(/📝 Κόψιμο 40%/.test(await page.textContent("#fl-body")), "feeding log shows the note");
+
+await go("production");
+check((await page.$$eval("#pr-body thead th", h => h.map(x => x.textContent))).includes("°C"), "production table shows the daily temperature");
+const todayD = await page.evaluate(() => localDate());
+await page.click("#pr-new"); await sleep(300);
+await page.fill("#prf-date", todayD); await page.selectOption("#prf-u", "un2");
+await page.fill("#prf-ch4", "49"); await page.fill("#prf-h", "23"); await page.fill("#prf-temp", "38");
+await page.click(".modal .foot .btn.primary");
+await waitFor(async () => !(await page.$(".modal")));
+const tAl = (await openAlerts()).find(a => a.unit_id === "un2" && a.metric === "Θερμοκρασία χωνευτή");
+check(tAl && tAl.severity === "critical" && /έλεγχος θέρμανσης/.test(tAl.message), `−2 °C in a day → critical heating alarm (${tAl && tAl.message.slice(0, 60)}…)`);
+await page.click("#pr-new"); await sleep(300);
+await page.fill("#prf-date", todayD); await page.selectOption("#prf-u", "un1");
+await page.fill("#prf-h", "12"); await page.check("#prf-planned");
+await page.click(".modal .foot .btn.primary");
+await waitFor(async () => !(await page.$(".modal")));
+check(!(await openAlerts()).some(a => a.unit_id === "un1" && a.metric === "Ώρες ΣΗΘ"), "12 h with «προγραμματισμένη στάση» → no CHP alarm");
+check(/🔧/.test(await page.textContent("#pr-body")), "planned stop marked in the production list");
+
+await go("params");
+check(/\+0,05 σε 14 ημ\./.test(await page.textContent("#params-body")), "FOS/TAC trend rule visible in Parameters");
+await shot("10-today");
 
 console.log("English & mobile");
 await page.evaluate(() => localStorage.setItem("lp-lang", "en"));

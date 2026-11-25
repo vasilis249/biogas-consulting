@@ -30,6 +30,7 @@ db/seed.sql                     # default παράμετροι
 db/migrations/0003_phase3.sql   # invitations + audit triggers
 db/migrations/0004_phase4_storage.sql  # Storage bucket + policies (Supabase-only)
 db/migrations/0010_production_integrity_roles.sql  # 1 εγγραφή παραγωγής/χωνευτή/ημέρα, όρια, admin-only ρυθμίσεις
+db/migrations/0011_trends_daily_readings.sql      # συναγερμοί τάσης, ημερήσια θερμοκρασία, προγρ. στάση ΣΗΘ, σημειώσεις τροφοδοσίας
 docs/DESIGN.md                  # αρχιτεκτονική, data model, roadmap
 ```
 
@@ -53,6 +54,7 @@ docs/DESIGN.md                  # αρχιτεκτονική, data model, roadma
 - ✅ Φάση 8 — Ισοζύγιο μάζας & ενέργειας (κλείσιμο, Van Kleeck VSR, η_el/η_th)
 - ✅ Φάση 9 — Αειφορία RED III: μείωση GHG (Παράρτημα VI) έναντι ορίου άρθρου 29(10) — βλ. [`docs/RED3.md`](docs/RED3.md)
 - ✅ Φάση 10 — Διορθώσεις P1 από την αξιολόγηση χειριστή (παραγωγή, σιτηρέσιο, χώνευμα, ρόλοι, ημερομηνίες) — βλ. [`docs/OPERATOR_REVIEW.md`](docs/OPERATOR_REVIEW.md) §0
+- ✅ Φάση 11 — Αρχική «Σήμερα» ανά χωνευτή, διαγράμματα & συναγερμοί τάσης, σχεδιασμός που ξέρει την κατάσταση του χωνευτή
 
 ## Tests
 ```bash
