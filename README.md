@@ -47,6 +47,7 @@ docs/DESIGN.md                  # αρχιτεκτονική, data model, roadma
 - ✅ Φάση 5 — forgot-password / email-OTP login, presence, Backup, Μηνιαία αναφορά
 - ✅ Φάση 6 — BioGas edition: biogas παράμετροι, μονάδες/χωνευτές, Παραγωγή + KPIs
 - ✅ Φάση 7 — Υποστρώματα, Τροφοδοσία (OLR/HRT), Χώνευμα (ΖΕΝ), Ειδοποιήσεις + email
+- ✅ Φάση 8 — Ισοζύγιο μάζας & ενέργειας (κλείσιμο, Van Kleeck VSR, η_el/η_th)
 
 ## Tests
 ```bash

@@ -92,7 +92,11 @@ tenant ──< units ──< samples ──< analyses >── parameters
   - **Χώνευμα**: παραγωγή/διάθεση/θρεπτικά + έλεγχος **Οδηγίας Νιτρορύπανσης** (170 kg N/ha/έτος ανά παραλήπτη).
   - **Ειδοποιήσεις**: αυτόματοι συναγερμοί στη βάση (triggers) για σταθερότητα χωνευτή, αέριο, ΣΗΘ, OLR/HRT, άζωτο — state-based (ενεργός→σε γνώση→επιλύθηκε, κλιμάκωση), με **email digests** (Edge Function `send-alerts` + pg_cron). Βλ. `docs/ALERTS_EMAIL.md`.
   - DB: `migrations/0007` (+`feedstocks`,`recipes`,`feeding`,`digestate`,`alerts`,`alert_recipients`, alarm engine, tenant-ref guard) & `0008` (cron). Tests: `tests/sql/run_local.sh`, `tests/digest.test.mjs`, `tests/e2e/demo_smoke.mjs`.
-- **Μελλοντικά:** RED III GHG savings / αειφορία (ISCC), guarantees of origin (ΔΑΠΕΕΠ), ισοζύγιο μάζας-ενέργειας, email προσκλήσεων χρηστών, πλήρες EL/EN.
+- **Φάση 8 — Ισοζύγιο μάζας & ενέργειας:** ✅ (client-side, από τα υπάρχοντα δεδομένα — χωρίς αλλαγή schema)
+  - Μάζα: υποστρώματα (νωπό/TS/VS) → βιοαέριο (m³ × πυκνότητα από CH₄%: ρ = x·0,7175 + (1−x)·1,977 kg/Nm³) + χώνευμα → **κλείσιμο %**, διάγραμμα ροής.
+  - Απομάκρυνση οργανικής ουσίας με **Van Kleeck**: VSR = (Fi − Fo)/(Fi − Fi·Fo), Fi = VS/TS τροφοδοσίας, Fo = VS/TS χωνευτή (τελευταία ανάλυση, σταθμισμένη ανά μονάδα).
+  - Ενέργεια: CH₄ × 9,97 kWh/m³ → η_el, η_th, απώλειες· ειδική απόδοση vs BMP· διαθεσιμότητα ΣΗΘ· αυτόματες παρατηρήσεις ποιότητας δεδομένων· Excel/εκτύπωση.
+- **Μελλοντικά:** RED III GHG savings / αειφορία (ISCC), guarantees of origin (ΔΑΠΕΕΠ), ισοζύγιο αζώτου εισόδου (N υποστρωμάτων), email προσκλήσεων χρηστών, πλήρες EL/EN.
 
 ### Migrations (συνέχεια)
 - `0005_phase5.sql`: `profiles.last_seen` + audit guard (τα heartbeats δεν καταγράφονται).

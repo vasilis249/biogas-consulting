@@ -218,6 +218,12 @@
   const mix = items => items.reduce((o, it) => { const f = F(it.feedstock_id), vs = it.mass_t * f.ts_pct / 100 * f.vs_pct / 100;
     o.vs += vs; o.ch4 += vs * f.bmp; return o; }, { vs: 0, ch4: 0 });
   const DAYS = 42;
+  // digestate overflows daily to the storage tank ≈ 97 % of (feed − biogas mass), net of other removals
+  // that day (sale / field), so the mass balance closes like a real plant (~3 % level / moisture drift)
+  const OTHER_REMOVALS = { un2: { 20: 150, 6: 330 } };
+  const NUTR = { un1: [4.6, 1.9, 5.2], un2: [5.1, 2.2, 5.6] };
+  const acc = { un1: 0, un2: 0 };
+  const rhoGas = ch4p => (ch4p / 100) * 0.7175 + (1 - ch4p / 100) * 1.977;
   for (let d = DAYS; d >= 1; d--) {
     for (const unit of ["un1", "un2"]) {
       let items;
@@ -239,6 +245,16 @@
         feedstock_t: r1(items.reduce((s, i) => s + i.mass_t, 0)), biogas_m3: r10(ch4 / (ch4p / 100)), ch4_pct: ch4p,
         kwh_el: r10(kwh), kwh_th: r10(kwh * 1.05), chp_hours: chp, flare_hours: 0, notes: chp < 20 ? "Συντήρηση ΣΗΘ (αλλαγή λαδιών)" : null,
         created_by: OP, created_at: iso(at) }], at));
+      const feedT = items.reduce((s, i) => s + i.mass_t, 0), gasT = r10(ch4 / (ch4p / 100)) * rhoGas(ch4p) / 1000;
+      acc[unit] += feedT - gasT - ((OTHER_REMOVALS[unit] || {})[d] || 0);
+      const mass = Math.round(acc[unit] * 0.97);
+      if (mass > 0) {                     // a deficit (big field/sale removal) carries over to the next days
+        acc[unit] = 0;
+        const tAt = dayAt(d, 16), [n, p, k] = NUTR[unit];
+        ev(tAt, () => insertRows("digestate", [{ id: uid(), tenant_id: T, unit_id: unit, log_date: fdate, mass_t: mass,
+          destination: "storage", recipient: null, field_area_ha: null, n_kg_t: n, p2o5_kg_t: p, k2o_kg_t: k,
+          notes: "Υπερχείλιση χωνευτή → δεξαμενή αποθήκευσης", created_by: OP, created_at: iso(tAt) }], tAt));
+      }
     }
   }
   // weekly lab samples: digester stability + gas quality (Χωνευτής 2 drifts into acidification)
@@ -285,8 +301,6 @@
   dig(yearDay(0.72), "un2", 250, "field", NIK, 25, 5.1, 2.2, 5.6);
   dig(yearDay(0.84), "un1", 55, "field", P1, 10, 4.6, 1.9, 5.2);
   dig(dayAt(20), "un2", 150, "sale", "Λιπασματοποιία Θεσσαλίας", null, 5.1, 2.2, 5.6);
-  dig(dayAt(15), "un1", 400, "storage", null, null, 4.6, 1.9, 5.2);
-  dig(dayAt(9), "un2", 600, "storage", null, null, 5.1, 2.2, 5.6);
   dig(dayAt(6), "un2", 330, "field", SYN, 18, 5.1, 2.2, 5.6);      // pushes this field over 170 kg N/ha
 
   events.sort((a, b) => a.at - b.at).forEach(e => e.run());

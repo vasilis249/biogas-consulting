@@ -104,6 +104,7 @@
   .badge,.btn{white-space:nowrap}
   .panel .body{overflow-x:auto}
   .cell-wrap{white-space:normal;min-width:260px;max-width:520px}
+  #mb-mass td,#mb-energy td{white-space:normal}
   .nav-badge{margin-left:auto;background:var(--warn);color:#fff;border-radius:999px;font-size:11px;font-weight:800;padding:1px 7px;line-height:1.5}
   .nav-badge.crit{background:var(--high)}
   .hint{border-radius:var(--r-sm);padding:10px 14px;margin-bottom:16px;font-size:13.5px;line-height:1.5}
@@ -197,6 +198,7 @@
     <button class="nav-item" data-view="production"><span class="ic">⚡</span> Παραγωγή</button>
     <button class="nav-item" data-view="feeding"><span class="ic">🌾</span> Τροφοδοσία</button>
     <button class="nav-item" data-view="digestate"><span class="ic">♻</span> Χώνευμα</button>
+    <button class="nav-item" data-view="massbalance"><span class="ic">⚖</span> Ισοζύγιο</button>
     <button class="nav-item" data-view="alerts"><span class="ic">🔔</span> Ειδοποιήσεις<span class="nav-badge hidden" id="alert-badge"></span></button>
     <button class="nav-item" data-view="reports"><span class="ic">📊</span> Reports</button>
     <div class="nav-sep"></div>
@@ -458,6 +460,12 @@
   const mix = items => items.reduce((o, it) => { const f = F(it.feedstock_id), vs = it.mass_t * f.ts_pct / 100 * f.vs_pct / 100;
     o.vs += vs; o.ch4 += vs * f.bmp; return o; }, { vs: 0, ch4: 0 });
   const DAYS = 42;
+  // digestate overflows daily to the storage tank ≈ 97 % of (feed − biogas mass), net of other removals
+  // that day (sale / field), so the mass balance closes like a real plant (~3 % level / moisture drift)
+  const OTHER_REMOVALS = { un2: { 20: 150, 6: 330 } };
+  const NUTR = { un1: [4.6, 1.9, 5.2], un2: [5.1, 2.2, 5.6] };
+  const acc = { un1: 0, un2: 0 };
+  const rhoGas = ch4p => (ch4p / 100) * 0.7175 + (1 - ch4p / 100) * 1.977;
   for (let d = DAYS; d >= 1; d--) {
     for (const unit of ["un1", "un2"]) {
       let items;
@@ -479,6 +487,16 @@
         feedstock_t: r1(items.reduce((s, i) => s + i.mass_t, 0)), biogas_m3: r10(ch4 / (ch4p / 100)), ch4_pct: ch4p,
         kwh_el: r10(kwh), kwh_th: r10(kwh * 1.05), chp_hours: chp, flare_hours: 0, notes: chp < 20 ? "Συντήρηση ΣΗΘ (αλλαγή λαδιών)" : null,
         created_by: OP, created_at: iso(at) }], at));
+      const feedT = items.reduce((s, i) => s + i.mass_t, 0), gasT = r10(ch4 / (ch4p / 100)) * rhoGas(ch4p) / 1000;
+      acc[unit] += feedT - gasT - ((OTHER_REMOVALS[unit] || {})[d] || 0);
+      const mass = Math.round(acc[unit] * 0.97);
+      if (mass > 0) {                     // a deficit (big field/sale removal) carries over to the next days
+        acc[unit] = 0;
+        const tAt = dayAt(d, 16), [n, p, k] = NUTR[unit];
+        ev(tAt, () => insertRows("digestate", [{ id: uid(), tenant_id: T, unit_id: unit, log_date: fdate, mass_t: mass,
+          destination: "storage", recipient: null, field_area_ha: null, n_kg_t: n, p2o5_kg_t: p, k2o_kg_t: k,
+          notes: "Υπερχείλιση χωνευτή → δεξαμενή αποθήκευσης", created_by: OP, created_at: iso(tAt) }], tAt));
+      }
     }
   }
   // weekly lab samples: digester stability + gas quality (Χωνευτής 2 drifts into acidification)
@@ -525,8 +543,6 @@
   dig(yearDay(0.72), "un2", 250, "field", NIK, 25, 5.1, 2.2, 5.6);
   dig(yearDay(0.84), "un1", 55, "field", P1, 10, 4.6, 1.9, 5.2);
   dig(dayAt(20), "un2", 150, "sale", "Λιπασματοποιία Θεσσαλίας", null, 5.1, 2.2, 5.6);
-  dig(dayAt(15), "un1", 400, "storage", null, null, 4.6, 1.9, 5.2);
-  dig(dayAt(9), "un2", 600, "storage", null, null, 5.1, 2.2, 5.6);
   dig(dayAt(6), "un2", 330, "field", SYN, 18, 5.1, 2.2, 5.6);      // pushes this field over 170 kg N/ha
 
   events.sort((a, b) => a.at - b.at).forEach(e => e.run());
@@ -834,6 +850,7 @@ function go(view){
   else if(view==="production") renderProduction();
   else if(view==="feeding") renderFeeding();
   else if(view==="digestate") renderDigestate();
+  else if(view==="massbalance") renderMassBalance();
   else if(view==="alerts") renderAlerts();
   else if(view==="feedstocks") renderFeedstocks();
   else if(view==="reports") renderReports();
@@ -2382,6 +2399,195 @@ async function loadRecipients(){
 }
 
 
+/* ============================ Mass & energy balance ============================ */
+const RHO_CH4 = 0.7175, RHO_CO2 = 1.977;                                    // kg/Nm³ (0 °C, 1 atm)
+const biogasRho = ch4pct => { const x=(ch4pct==null||!isFinite(Number(ch4pct)) ? 53 : Number(ch4pct))/100; return x*RHO_CH4+(1-x)*RHO_CO2; };
+function closureState(v){ if(v==null) return "na"; if(v<85||v>110) return "crit"; if(v<93||v>103) return "warn"; return "ok"; }
+function vsrState(v){ if(v==null) return "na"; if(v<40) return "crit"; if(v<55) return "warn"; return "ok"; }
+function etaState(v){ if(v==null) return "na"; if(v<30||v>46) return "warn"; return "ok"; }
+async function renderMassBalance(){
+  const main=$("#main"), now=new Date().toISOString().slice(0,10);
+  const MB=state.mb||(state.mb={month:now.slice(0,7),unit:""});
+  main.innerHTML=`<div class="page-head">
+      <div><h1 class="page-title">Ισοζύγιο μάζας & ενέργειας</h1>
+        <div class="sub">Υποστρώματα → βιοαέριο & χώνευμα · απομάκρυνση οργανικής ουσίας · ενεργειακή αξιοποίηση</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="margin:0"><label>Μήνας</label><input class="input" id="mb-month" type="month"></div>
+        <div class="field" style="margin:0"><label>Μονάδα</label><select class="input" id="mb-unit"><option value="">Όλες</option></select></div>
+        <button class="btn" id="mb-xlsx">⤓ Excel</button>
+        <button class="btn" id="mb-print">🖨 Εκτύπωση</button>
+      </div></div>
+    <div class="stats" id="mb-stats"></div>
+    <div id="mb-notes"></div>
+    <div class="panel" style="margin-bottom:16px"><h3>Ροή μάζας</h3><div class="body" id="mb-flow" style="padding:14px 18px"></div></div>
+    <div class="row" style="align-items:flex-start;margin-bottom:16px">
+      <div class="panel" style="min-width:300px"><h3>Ισοζύγιο μάζας</h3><div class="body" id="mb-mass"></div></div>
+      <div class="panel" style="min-width:300px"><h3>Ενεργειακό ισοζύγιο</h3><div class="body" id="mb-energy"></div></div>
+    </div>
+    <div class="panel"><h3>Είσοδοι ανά υπόστρωμα</h3><div class="body" id="mb-feed"></div></div>`;
+  const mu=$("#mb-unit"); state.units.forEach(u=>mu.append(el("option",{value:u.id},u.name))); mu.value=MB.unit;
+  $("#mb-month").value=MB.month;
+  $("#mb-month").onchange=e=>{ MB.month=e.target.value||now.slice(0,7); loadMassBalance(); };
+  mu.onchange=()=>{ MB.unit=mu.value; loadMassBalance(); };
+  $("#mb-xlsx").onclick=exportMassBalanceXlsx;
+  $("#mb-print").onclick=()=>window.print();
+  loadMassBalance();
+}
+async function loadMassBalance(){
+  const MB=state.mb, T=state.tenantId, { from, to } = monthRange(MB.month);
+  const byUnit=q=>MB.unit ? q.eq("unit_id",MB.unit) : q;
+  const [fe, pr, dg, an] = await Promise.all([
+    byUnit(sb.from("feeding").select("*").eq("tenant_id",T).gte("feed_date",from).lt("feed_date",to).limit(20000)),
+    byUnit(sb.from("production").select("*").eq("tenant_id",T).gte("log_date",from).lt("log_date",to).limit(5000)),
+    byUnit(sb.from("digestate").select("*").eq("tenant_id",T).gte("log_date",from).lt("log_date",to).limit(5000)),
+    sb.from("analyses").select("value,created_at,parameter:parameters(code),sample:samples(kind,unit_id)")
+      .eq("tenant_id",T).lt("created_at",to).order("created_at",{ascending:false}).limit(3000),
+  ]);
+  const err=fe.error||pr.error||dg.error;
+  if(err){ $("#mb-mass").innerHTML=`<div class="empty">Σφάλμα: ${esc(err.message)}</div>`; return; }
+  const feed=fe.data||[], prod=pr.data||[], dig=dg.data||[];
+
+  // inputs
+  const byFs={}, vsByUnit={};
+  let inT=0, inTS=0, inVS=0, ch4Exp=0;
+  feed.forEach(r=>{
+    const fs=state.feedstockById[r.feedstock_id]||{}, m=Number(r.mass_t)||0;
+    const ts=m*(Number(fs.ts_pct)||0)/100, vs=ts*(Number(fs.vs_pct)||0)/100, c=vs*(Number(fs.bmp)||0);
+    const g=byFs[r.feedstock_id]||(byFs[r.feedstock_id]={name:fs.name||"(άγνωστο)",m:0,ts:0,vs:0,c:0,days:new Set()});
+    g.m+=m; g.ts+=ts; g.vs+=vs; g.c+=c; g.days.add(r.feed_date);
+    inT+=m; inTS+=ts; inVS+=vs; ch4Exp+=c; vsByUnit[r.unit_id]=(vsByUnit[r.unit_id]||0)+vs;
+  });
+  // outputs
+  let gasM3=0, gasT=0, ch4M3=0, kwhEl=0, kwhTh=0, chpH=0, flareH=0;
+  prod.forEach(p=>{
+    const v=Number(p.biogas_m3)||0;
+    gasM3+=v; gasT+=v*biogasRho(p.ch4_pct)/1000; ch4M3+=v*(Number(p.ch4_pct)||0)/100;
+    kwhEl+=Number(p.kwh_el)||0; kwhTh+=Number(p.kwh_th)||0; chpH+=Number(p.chp_hours)||0; flareH+=Number(p.flare_hours)||0;
+  });
+  const digT=dig.reduce((s,r)=>s+(Number(r.mass_t)||0),0);
+  const outT=gasT+digT, gap=inT-outT, closure=inT>0 ? outT/inT*100 : null;
+  // VS removal (Van Kleeck): feed VS/TS vs latest digester VS/TS per plant, weighted by VS fed
+  const latestVs={};
+  (an.data||[]).forEach(a=>{ if(!a.parameter||a.parameter.code!=="vs"||!a.sample||a.sample.kind!=="digester") return;
+    if(latestVs[a.sample.unit_id]==null) latestVs[a.sample.unit_id]=Number(a.value)/100; });
+  const fi=inTS>0 ? inVS/inTS : null;
+  let w=0, fo=0; Object.entries(vsByUnit).forEach(([u,v])=>{ if(latestVs[u]!=null){ fo+=latestVs[u]*v; w+=v; } });
+  fo = w>0 ? fo/w : null;
+  const vsr=(fi!=null && fo!=null && fi-fi*fo>0) ? (fi-fo)/(fi-fi*fo)*100 : null;
+  // energy
+  const eCh4=ch4M3*CH4_KWH;                                                   // kWh (LHV)
+  const etaEl=eCh4>0 ? kwhEl/eCh4*100 : null, etaTh=eCh4>0 ? kwhTh/eCh4*100 : null;
+  const loss=(etaEl!=null&&etaTh!=null) ? 100-etaEl-etaTh : null;
+  const specY=inVS>0 ? ch4M3/inVS : null, specExp=inVS>0 ? ch4Exp/inVS : null, eff=ch4Exp>0 ? ch4M3/ch4Exp*100 : null;
+  const unitDays=new Set(prod.map(p=>p.unit_id+"|"+p.log_date)).size, avail=unitDays>0 ? chpH/(unitDays*24)*100 : null;
+  const avgCh4=gasM3>0 ? ch4M3/gasM3*100 : null, rho=gasM3>0 ? gasT*1000/gasM3 : null;
+  state._mb={month:MB.month, unit:MB.unit, inT,inTS,inVS,gasM3,gasT,digT,gap,closure,fi,fo,vsr,ch4M3,eCh4,kwhEl,kwhTh,etaEl,etaTh,loss,specY,specExp,eff,avail,flareH,byFs};
+
+  const cs=closureState(closure), vs=vsrState(vsr);
+  $("#mb-stats").innerHTML=
+    statTile("Είσοδος μάζας", fmtNum(Math.round(inT))+" t")+
+    statTile("Έξοδος μάζας", fmtNum(Math.round(outT))+" t")+
+    statTile("Κλείσιμο ισοζυγίου", closure!=null ? closure.toFixed(1)+"%" : "—", stColor(cs))+
+    statTile("Απομάκρυνση VS", vsr!=null ? Math.round(vsr)+"%" : "—", stColor(vs))+
+    statTile("m³ CH₄ / t VS", specY!=null ? Math.round(specY)+(specExp?` / ${Math.round(specExp)}`:"") : "—", stColor(eff==null?"na":effState(eff)))+
+    statTile("η ηλεκτρ. ΣΗΘ", etaEl!=null ? etaEl.toFixed(1)+"%" : "—", stColor(etaState(etaEl)));
+
+  // data-quality & process notes
+  const notes=[];
+  const feedDays=new Set(feed.map(r=>r.unit_id+"|"+r.feed_date)), prodDays=new Set(prod.map(p=>p.unit_id+"|"+p.log_date));
+  const noProd=[...feedDays].filter(k=>!prodDays.has(k)).length, noFeed=[...prodDays].filter(k=>!feedDays.has(k)).length;
+  if(!feed.length && !prod.length) notes.push("Δεν υπάρχουν καταγραφές τροφοδοσίας ή παραγωγής για την περίοδο.");
+  if(closure!=null && (cs==="warn"||cs==="crit")) notes.push(gap>0
+    ? `<b>Το ισοζύγιο δεν κλείνει:</b> ${fmtNum(Math.round(gap))} t (${(100-closure).toFixed(1)}%) δεν εμφανίζονται στις εξόδους — πιθανή αύξηση στάθμης χωνευτή/δεξαμενών ή ελλιπής καταγραφή απομάκρυνσης χωνεύματος.`
+    : `<b>Οι έξοδοι υπερβαίνουν τις εισόδους</b> κατά ${fmtNum(Math.round(-gap))} t — πιθανή εκκένωση αποθέματος ή διπλοκαταχώριση απομάκρυνσης.`);
+  if(noProd) notes.push(`${noProd} ημέρες-μονάδες με τροφοδοσία χωρίς καταγραφή παραγωγής.`);
+  if(noFeed) notes.push(`${noFeed} ημέρες-μονάδες με παραγωγή χωρίς καταγραφή τροφοδοσίας.`);
+  if(inVS>0 && fo==null) notes.push("Δεν βρέθηκε ανάλυση <b>VS χωνευτή</b> (δείγμα τύπου «Χωνευτής») — δεν υπολογίζεται η απομάκρυνση οργανικής ουσίας.");
+  if(vs==="warn"||vs==="crit") notes.push(`<b>Χαμηλή απομάκρυνση VS (${Math.round(vsr)}%)</b> — η οργανική ουσία δεν αξιοποιείται πλήρως· έλεγξε φόρτιση (OLR), χρόνο παραμονής και σταθερότητα (FOS/TAC).`);
+  if(eff!=null && effState(eff)==="warn") notes.push(`Η πραγματική παραγωγή μεθανίου είναι <b>${Math.round(eff)}%</b> της αναμενόμενης από το BMP των υποστρωμάτων.`);
+  if(etaEl!=null && etaState(etaEl)==="warn") notes.push(`Ηλεκτρικός βαθμός απόδοσης <b>${etaEl.toFixed(1)}%</b> εκτός του τυπικού 33–45% — έλεγξε μετρητές αερίου/ενέργειας ή κατάσταση ΣΗΘ.`);
+  if(flareH>0) notes.push(`Λειτουργία πυρσού ${fmtNum(flareH)} ώρες — καμένο αέριο χωρίς ενεργειακή αξιοποίηση.`);
+  $("#mb-notes").innerHTML = notes.length ? `<div class="hint warn">⚠ <b>Παρατηρήσεις</b><ul>${notes.map(n=>`<li>${n}</li>`).join("")}</ul></div>`
+    : (inT>0 ? `<div class="hint ok">✓ Το ισοζύγιο κλείνει (${closure.toFixed(1)}%) και οι δείκτες είναι εντός τυπικών ορίων.</div>` : "");
+
+  $("#mb-flow").innerHTML = inT>0 ? mbFlowSvg(inT,[
+    {label:"Χώνευμα", t:digT, color:"var(--accent)"},
+    {label:"Βιοαέριο", t:gasT, color:"var(--primary)"},
+    {label:gap>=0?"Απόθεμα / μη καταγεγραμμένα":"Υπέρβαση εξόδων", t:Math.abs(gap), color:"var(--faint)"},
+  ]) : `<div class="empty">Καμία τροφοδοσία για ${esc(MB.month)}.</div>`;
+
+  const row=(k,v,sub)=>[k,`<b>${v}</b>`,sub?`<span class="small muted">${sub}</span>`:""];
+  $("#mb-mass").innerHTML=table(["","",""],[
+    row("Υποστρώματα (νωπό βάρος)", fmtNum(Math.round(inT))+" t"),
+    row("↳ ξηρή ουσία (TS)", fmtNum(r1n(inTS))+" t", inT>0?(inTS/inT*100).toFixed(1)+"% του νωπού":""),
+    row("↳ οργανική ουσία (VS)", fmtNum(r1n(inVS))+" t", fi!=null?(fi*100).toFixed(1)+"% του TS":""),
+    row("Βιοαέριο", fmtNum(r1n(gasT))+" t", gasM3?`${fmtNum(Math.round(gasM3))} m³ · ρ ${rho.toFixed(3)} kg/m³`:""),
+    row("Χώνευμα (απομάκρυνση)", fmtNum(Math.round(digT))+" t", `${dig.length} κινήσεις`),
+    row(gap>=0?"Απόθεμα / μη καταγεγραμμένα":"Υπέρβαση εξόδων", fmtNum(Math.round(Math.abs(gap)))+" t", inT>0?(Math.abs(gap)/inT*100).toFixed(1)+"% της εισόδου":""),
+    row("Κλείσιμο ισοζυγίου", closure!=null?stBadge(cs,closure.toFixed(1)+"%"):"—", "έξοδοι / είσοδοι"),
+    row("Απομάκρυνση VS (Van Kleeck)", vsr!=null?stBadge(vs,Math.round(vsr)+"%"):"—", (fi!=null&&fo!=null)?`VS/TS τροφοδοσίας ${(fi*100).toFixed(0)}% → χωνευτή ${(fo*100).toFixed(0)}%`:""),
+  ]).replace(/<thead>[\s\S]*?<\/thead>/,"");
+  $("#mb-energy").innerHTML=table(["","",""],[
+    row("Βιοαέριο", fmtNum(Math.round(gasM3))+" m³", avgCh4!=null?`Μ.Ο. CH₄ ${avgCh4.toFixed(1)}%`:""),
+    row("Μεθάνιο", fmtNum(Math.round(ch4M3))+" m³", "LHV 9,97 kWh/m³"),
+    row("Ενέργεια μεθανίου", fmtNum(r1n(eCh4/1000))+" MWh", "100%"),
+    row("Ηλεκτρική ενέργεια", fmtNum(r1n(kwhEl/1000))+" MWh", etaEl!=null?stBadge(etaState(etaEl),"η "+etaEl.toFixed(1)+"%"):""),
+    row("Θερμική ενέργεια", fmtNum(r1n(kwhTh/1000))+" MWh", etaTh!=null?"η "+etaTh.toFixed(1)+"%":""),
+    row("Απώλειες / μη αξιοποίηση", loss!=null?loss.toFixed(1)+"%":"—", flareH?`πυρσός ${fmtNum(flareH)} h`:""),
+    row("Ειδική απόδοση", specY!=null?Math.round(specY)+" m³ CH₄/t VS":"—", specExp?`αναμενόμενη ${Math.round(specExp)} (BMP) → ${Math.round(eff)}%`:""),
+    row("Διαθεσιμότητα ΣΗΘ", avail!=null?avail.toFixed(1)+"%":"—", `${unitDays} ημέρες-μονάδες`),
+  ]).replace(/<thead>[\s\S]*?<\/thead>/,"");
+  const fsRows=Object.values(byFs).sort((a,b)=>b.vs-a.vs);
+  $("#mb-feed").innerHTML = fsRows.length ? table(
+    ["Υπόστρωμα","Ημέρες","Νωπό t","TS t","VS t","% του VS","Αναμ. CH₄ m³"],
+    fsRows.map(g=>[esc(g.name), g.days.size, fmtNum(Math.round(g.m)), fmtNum(r1n(g.ts)), fmtNum(r1n(g.vs)),
+      inVS>0?(g.vs/inVS*100).toFixed(1)+"%":"—", fmtNum(Math.round(g.c))])
+  ) : `<div class="empty">Καμία τροφοδοσία για ${esc(MB.month)}.</div>`;
+}
+function r1n(x){ return Math.round((Number(x)||0)*10)/10; }
+// Simple two-column flow diagram (inputs → outputs), heights proportional to tonnes.
+function mbFlowSvg(inT, outs){
+  const W=900, H=230, top=18, h=180, x0=170, x1=520, bw=18, mid=(x0+bw+x1)/2;
+  const total=Math.max(inT, outs.reduce((s,o)=>s+Math.max(o.t,0),0), 1e-9), sc=h/total;
+  let yL=top, yR=top, lastLbl=-99, bands="", bars="", labels="";
+  outs.forEach(o=>{
+    const t=Math.max(o.t,0); if(t<=0) return; const hh=t*sc;
+    bands+=`<path d="M${x0+bw},${yL} C${mid},${yL} ${mid},${yR} ${x1},${yR} L${x1},${yR+hh} C${mid},${yR+hh} ${mid},${yL+hh} ${x0+bw},${yL+hh} Z" fill="${o.color}" opacity=".22"/>`;
+    bars+=`<rect x="${x1}" y="${yR}" width="${bw}" height="${Math.max(hh,1.5)}" rx="2" fill="${o.color}"/>`;
+    const ly=Math.max(yR+hh/2+4, lastLbl+17); lastLbl=ly;
+    labels+=`<text x="${x1+bw+10}" y="${ly}" font-size="13" fill="currentColor">${esc(o.label)} · <tspan font-weight="700">${fmtNum(Math.round(t))} t</tspan> (${(t/inT*100).toFixed(1)}%)</text>`;
+    yL+=hh; yR+=hh;
+  });
+  const hin=inT*sc;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:900px;color:var(--ink);display:block" role="img" aria-label="Ροή μάζας">
+    <rect x="${x0}" y="${top}" width="${bw}" height="${hin}" rx="2" fill="var(--primary)"/>
+    <text x="${x0-12}" y="${top+hin/2-2}" text-anchor="end" font-size="13" fill="currentColor">Υποστρώματα</text>
+    <text x="${x0-12}" y="${top+hin/2+16}" text-anchor="end" font-size="14" font-weight="700" fill="currentColor">${fmtNum(Math.round(inT))} t</text>
+    ${bands}${bars}${labels}</svg>`;
+}
+function exportMassBalanceXlsx(){
+  const m=state._mb; if(!m || !m.inT) return toast("Δεν υπάρχουν δεδομένα για εξαγωγή.");
+  if(!window.XLSX) return toast("Το Excel library δεν φόρτωσε.");
+  const r=x=>x==null?null:Math.round(x*10)/10;
+  const mass=[
+    {Μέγεθος:"Υποστρώματα (νωπό)",Τιμή:r(m.inT),Μονάδα:"t"},{Μέγεθος:"Ξηρή ουσία (TS)",Τιμή:r(m.inTS),Μονάδα:"t"},
+    {Μέγεθος:"Οργανική ουσία (VS)",Τιμή:r(m.inVS),Μονάδα:"t"},{Μέγεθος:"Βιοαέριο",Τιμή:r(m.gasT),Μονάδα:"t"},
+    {Μέγεθος:"Χώνευμα (απομάκρυνση)",Τιμή:r(m.digT),Μονάδα:"t"},{Μέγεθος:"Απόθεμα / μη καταγεγραμμένα",Τιμή:r(m.gap),Μονάδα:"t"},
+    {Μέγεθος:"Κλείσιμο ισοζυγίου",Τιμή:r(m.closure),Μονάδα:"%"},{Μέγεθος:"Απομάκρυνση VS (Van Kleeck)",Τιμή:r(m.vsr),Μονάδα:"%"}];
+  const energy=[
+    {Μέγεθος:"Βιοαέριο",Τιμή:Math.round(m.gasM3),Μονάδα:"m³"},{Μέγεθος:"Μεθάνιο",Τιμή:Math.round(m.ch4M3),Μονάδα:"m³"},
+    {Μέγεθος:"Ενέργεια μεθανίου",Τιμή:r(m.eCh4/1000),Μονάδα:"MWh"},{Μέγεθος:"Ηλεκτρική ενέργεια",Τιμή:r(m.kwhEl/1000),Μονάδα:"MWh"},
+    {Μέγεθος:"Θερμική ενέργεια",Τιμή:r(m.kwhTh/1000),Μονάδα:"MWh"},{Μέγεθος:"η ηλεκτρ.",Τιμή:r(m.etaEl),Μονάδα:"%"},
+    {Μέγεθος:"η θερμ.",Τιμή:r(m.etaTh),Μονάδα:"%"},{Μέγεθος:"Ειδική απόδοση",Τιμή:r(m.specY),Μονάδα:"m³ CH₄/t VS"},
+    {Μέγεθος:"Αναμενόμενη (BMP)",Τιμή:r(m.specExp),Μονάδα:"m³ CH₄/t VS"},{Μέγεθος:"Διαθεσιμότητα ΣΗΘ",Τιμή:r(m.avail),Μονάδα:"%"}];
+  const feed=Object.values(m.byFs).map(g=>({Υπόστρωμα:g.name,Ημέρες:g.days.size,"Νωπό t":r(g.m),"TS t":r(g.ts),"VS t":r(g.vs),"Αναμ. CH4 m3":Math.round(g.c)}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mass),"Μάζα");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(energy),"Ενέργεια");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(feed),"Υποστρώματα");
+  XLSX.writeFile(wb,`Ισοζύγιο_${m.month}${m.unit?"_"+unitName(m.unit):""}.xlsx`); toast("Excel κατέβηκε");
+}
+
 /* ============================ helpers: table builder ============================ */
 function table(headers, rows, rowClicks){
   const thead=`<thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead>`;
@@ -2606,6 +2812,16 @@ const I18N = {
   "📧 Παραλήπτες email":"📧 Email recipients","Λαμβάνει":"Receives","Ενεργό":"Enabled","＋ Προσθήκη":"+ Add",
   "Όλες (προειδοποιήσεις & κρίσιμες)":"All (warnings & critical)","Μόνο κρίσιμες":"Critical only","Ενεργές ειδοποιήσεις":"Active alerts",
   "🔔 Ενεργές ειδοποιήσεις":"🔔 Active alerts","Όλες →":"All →",
+  // mass & energy balance
+  "Ισοζύγιο":"Balance","Ισοζύγιο μάζας & ενέργειας":"Mass & energy balance","Ροή μάζας":"Mass flow",
+  "Ισοζύγιο μάζας":"Mass balance","Ενεργειακό ισοζύγιο":"Energy balance","Είσοδοι ανά υπόστρωμα":"Inputs by feedstock",
+  "Είσοδος μάζας":"Mass in","Έξοδος μάζας":"Mass out","Κλείσιμο ισοζυγίου":"Balance closure","Απομάκρυνση VS":"VS removal",
+  "η ηλεκτρ. ΣΗΘ":"CHP electrical η","Υποστρώματα (νωπό βάρος)":"Feedstocks (fresh weight)",
+  "↳ ξηρή ουσία (TS)":"↳ total solids (TS)","↳ οργανική ουσία (VS)":"↳ volatile solids (VS)",
+  "Χώνευμα (απομάκρυνση)":"Digestate (removed)","Απόθεμα / μη καταγεγραμμένα":"Storage / unaccounted","Υπέρβαση εξόδων":"Outputs exceed inputs",
+  "Απομάκρυνση VS (Van Kleeck)":"VS removal (Van Kleeck)","Μεθάνιο":"Methane","Ενέργεια μεθανίου":"Methane energy",
+  "Ηλεκτρική ενέργεια":"Electricity","Θερμική ενέργεια":"Heat","Απώλειες / μη αξιοποίηση":"Losses / unused",
+  "Ημέρες":"Days","Νωπό t":"Fresh t","% του VS":"% of VS",
 };
 let LANG = localStorage.getItem("lp-lang")||"el";
 function trFull(s){
