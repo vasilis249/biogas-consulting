@@ -7,6 +7,8 @@
    * Emulates the database: the feeding_daily view and the alarm triggers of
      db/migrations/0007 (same thresholds, keys and messages), so alarms appear,
      escalate and resolve while you click around.
+   * Enforces the production constraints of db/migrations/0010 (CHECK ranges,
+     one log per digester and day) with the same SQLSTATE codes (23514/23505).
    * Seeds a physically consistent 2-digester plant and replays ~6 weeks of
      operation in chronological order, so the alarm history is genuine.
    Data lives in memory: a page refresh restores the seed.
@@ -247,7 +249,7 @@
       const at = dayAt(d - 1, 8, 10);
       ev(at, () => insertRows("production", [{ id: uid(), tenant_id: T, unit_id: unit, log_date: fdate,
         feedstock_t: r1(items.reduce((s, i) => s + i.mass_t, 0)), biogas_m3: r10(ch4 / (ch4p / 100)), ch4_pct: ch4p,
-        kwh_el: r10(kwh), kwh_th: r10(kwh * 1.05), chp_hours: chp, flare_hours: 0, notes: chp < 20 ? "Συντήρηση ΣΗΘ (αλλαγή λαδιών)" : null,
+        kwh_el: r10(kwh), kwh_th: r10(kwh * 1.05), chp_hours: chp, flare_hours: chp < 20 ? 3.5 : 0, notes: chp < 20 ? "Συντήρηση ΣΗΘ (αλλαγή λαδιών)" : null,
         created_by: OP, created_at: iso(at) }], at));
       const feedT = items.reduce((s, i) => s + i.mass_t, 0), gasT = r10(ch4 / (ch4p / 100)) * rhoGas(ch4p) / 1000;
       acc[unit] += feedT - gasT - ((OTHER_REMOVALS[unit] || {})[d] || 0);
@@ -324,6 +326,24 @@
     audit_log: r => ({ ...r, actor: DB.profiles.find(p => p.id === r.user_id) || null }),
   };
   const VIEWS = { feeding_daily: feedingDaily };
+  // Constraints of migration 0010 (production): CHECK ranges + unique (unit_id, log_date).
+  const CHECKS = { production: [
+    ["production_ch4_pct_check",     r => r.ch4_pct == null || (r.ch4_pct >= 0 && r.ch4_pct <= 100)],
+    ["production_chp_hours_check",   r => r.chp_hours == null || (r.chp_hours >= 0 && r.chp_hours <= 24)],
+    ["production_flare_hours_check", r => r.flare_hours == null || (r.flare_hours >= 0 && r.flare_hours <= 24)],
+    ...["feedstock_t", "biogas_m3", "kwh_el", "kwh_th"].map(k => ["production_" + k + "_check", r => r[k] == null || r[k] >= 0]),
+  ] };
+  const UNIQUE = { production: ["production_unit_day_key", ["unit_id", "log_date"]] };
+  function violates(t, rows, others) {
+    for (const r of rows) for (const [name, ok] of (CHECKS[t] || []))
+      if (!ok(r)) return { code: "23514", message: `new row for relation "${t}" violates check constraint "${name}"` };
+    const u = UNIQUE[t]; if (!u) return null;
+    const key = r => u[1].some(c => r[c] == null) ? null : u[1].map(c => String(r[c])).join("|");
+    const seen = new Set(others.map(key).filter(Boolean));
+    for (const r of rows) { const k = key(r); if (!k) continue;
+      if (seen.has(k)) return { code: "23505", message: `duplicate key value violates unique constraint "${u[0]}"` }; seen.add(k); }
+    return null;
+  }
   function run(st) {
     const t = st.table, at = iso(new Date());
     if (VIEWS[t] && st.op !== "select") return { data: null, error: { message: `cannot modify view ${t}` } };
@@ -331,12 +351,15 @@
     if (st.op === "insert") {
       const arr = Array.isArray(st.payload) ? st.payload : [st.payload];
       const ins = arr.map(o => ({ id: uid(), created_at: at, ...o }));
+      const bad = violates(t, ins, rows); if (bad) return { data: null, error: bad };
       DB[t] = rows.concat(ins); afterWrite(t, [], ins, at);
       return { data: st.single ? ins[0] : ins, error: null };
     }
     if (st.op === "update") {
       const hit = rows.filter(r => st.filters.every(f => f(r)));
       const olds = hit.map(r => ({ ...r }));
+      const bad = violates(t, hit.map(r => ({ ...r, ...st.payload })), rows.filter(r => !hit.includes(r)));
+      if (bad) return { data: null, error: bad };
       hit.forEach(r => Object.assign(r, st.payload)); afterWrite(t, olds, hit, at);
       return { data: null, error: null };
     }

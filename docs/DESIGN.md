@@ -28,8 +28,12 @@ pH/EC/NPK, μονάδες, reports), για να την προσφέρεις σ�
 | Ρόλος | Διαβάζει | Γράφει | Οικονομικά | Διαχείριση χρηστών |
 |---|---|---|---|---|
 | `admin` | ✅ | ✅ | ✅ | ✅ (του tenant) |
-| `operator` | ✅ | ✅ | ❌ | ❌ |
+| `operator` | ✅ | ✅ ημερήσια δεδομένα* | ❌ | ❌ |
 | `viewer` | ✅ | ❌ | ❌ | ❌ |
+
+\* Από τη migration 0010 ο `operator` γράφει δείγματα/αναλύσεις, παραγωγή, τροφοδοσία,
+χώνευμα, υποστρώματα & συνταγές, αλλά **όχι** μονάδες/χωνευτές (`units`) και όρια
+συναγερμών (`parameters`): αυτά είναι μόνο για `admin` (RLS μέσω `is_tenant_admin()`).
 
 ## 3. Data model
 Πλήρες schema: [`db/schema.sql`](../db/schema.sql) · seed: [`db/seed.sql`](../db/seed.sql)
@@ -60,7 +64,8 @@ tenant ──< units ──< samples ──< analyses >── parameters
 - Helper functions `is_platform_admin()`, `auth_tenant_id()`, `auth_role()`,
   `can_write()` (SECURITY DEFINER, ώστε να μην έχουμε recursion στα RLS policies).
 - Auto-provision profile με trigger στο signup (`handle_new_user`).
-- Write μόνο για `admin`/`operator`· `viewer` = read-only.
+- Write μόνο για `admin`/`operator`· `viewer` = read-only. Ρύθμιση εγκατάστασης
+  (`units`) και όρια συναγερμών (`parameters`) μόνο `admin` (`is_tenant_admin()`, 0010).
 - Οικονομικά: write μόνο `admin`.
 - Προτεινόμενα αργότερα: 2FA/OTP στο login (Supabase MFA), CSRF δεν χρειάζεται
   (token-based auth, όχι cookies), rate limiting στο edge.
@@ -97,6 +102,7 @@ tenant ──< units ──< samples ──< analyses >── parameters
   - Απομάκρυνση οργανικής ουσίας με **Van Kleeck**: VSR = (Fi − Fo)/(Fi − Fi·Fo), Fi = VS/TS τροφοδοσίας, Fo = VS/TS χωνευτή (τελευταία ανάλυση, σταθμισμένη ανά μονάδα).
   - Ενέργεια: CH₄ × 9,97 kWh/m³ → η_el, η_th, απώλειες· ειδική απόδοση vs BMP· διαθεσιμότητα ΣΗΘ· αυτόματες παρατηρήσεις ποιότητας δεδομένων· Excel/εκτύπωση.
 - **Φάση 9 — Αειφορία RED III:** ✅ μείωση GHG με προεπιλεγμένες τιμές Παραρτήματος VI (co-digestion Wₙ/Sₙ/Pₙ), όριο άρθρου 29(10) ανά ημ/νία έναρξης & ισχύ, σενάρια (αποθήκευση χωνεύματος × Case), αποφυγή tCO₂eq, Excel. `lib/red3.js` + `tests/red3.test.mjs` (αναπαράγει τους επίσημους πίνακες), `migrations/0009`. Βλ. `docs/RED3.md`.
+- **Φάση 10 — Διορθώσεις operator review (P1):** ✅ `migrations/0010`: μία εγγραφή παραγωγής ανά χωνευτή/ημέρα (unique, με «Αντικατάσταση;» στη φόρμα· τα υπάρχοντα διπλότυπα συμπτύσσονται και σώζονται αυτούσια στο `audit_log`), φυσικά όρια (CH₄ 0–100 %, ώρες ΣΗΘ/πυρσού 0–24, όχι αρνητικά — CHECK, NOT VALID αν υπάρχουν παλιά «βρώμικα» δεδομένα), μονάδες & όρια συναγερμών μόνο για admin. UI: πεδίο ώρες πυρσού, προεπιλογή χθεσινή ημέρα, έλεγχος kWh ≤ ισχύς ΣΗΘ × 24 h, σχεδιασμός σιτηρεσίου που φορτώνει τον σωστό χωνευτή, προειδοποίηση πριν από υπέρβαση 170 kg N/ha, τοπικές ημερομηνίες αντί για UTC, toast χωρίς pointer-events. Tests: `tests/sql/test_phase10.sql`, upgrade path στο `run_local.sh`, ενότητα «Operator review — P1 fixes» στο E2E. Βλ. `docs/OPERATOR_REVIEW.md` §0.
 - **Μελλοντικά:** πιστοποίηση με actual values (ISCC), guarantees of origin (ΔΑΠΕΕΠ), ισοζύγιο αζώτου εισόδου (N υποστρωμάτων), email προσκλήσεων χρηστών, πλήρες EL/EN.
 
 ### Migrations (συνέχεια)

@@ -16,7 +16,9 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1320, height: 900 }, deviceScaleFactor: SHOTS ? 2 : 1 });
 const errors = [];
 page.on("pageerror", e => errors.push(e.message));
-page.on("dialog", d => d.accept());
+const dialogs = [];
+let dismissNext = false;                                  // set to answer the next confirm() with «Άκυρο»
+page.on("dialog", d => { dialogs.push(d.message()); if (dismissNext) { dismissNext = false; return d.dismiss(); } return d.accept(); });
 const shot = async name => { if (SHOTS) await page.screenshot({ path: path.join(SHOTS, name + ".png") }); };
 const db = (fn, ...args) => page.evaluate(fn, ...args);
 const go = async view => { await page.click(`.nav-item[data-view="${view}"]`); await sleep(700); };
@@ -167,6 +169,112 @@ check((await page.$$("#al-recips tbody tr")).length === 3, "e-mail recipients li
 await page.click('[data-af="open"]');
 await sleep(400);
 await shot("6-alerts");
+
+console.log("Operator review — P1 fixes");
+const waitFor = async (fn, ms = 3000) => { for (let t = 0; t < ms; t += 100) { if (await fn()) return true; await sleep(100); } return false; };
+// (1) planner: switching digester loads THAT digester's latest ration
+await go("feeding");
+const latestIds = unit => db(u => { const F = window.__BIOGAS_DEMO_DB__.feeding.filter(f => f.unit_id === u);
+  const last = F.map(f => f.feed_date).sort().pop(); return F.filter(f => f.feed_date === last).map(f => f.feedstock_id).sort().join(","); }, unit);
+const planIds = () => page.$$eval("#pl-lines .pl-fs", s => s.map(x => x.value).sort().join(","));
+await page.selectOption("#pl-unit", "un1");
+await waitFor(async () => (await planIds()) === (await latestIds("un1")));
+check((await planIds()) === (await latestIds("un1")), "switching to Χωνευτής 1 loads its own latest ration");
+check(/Χωνευτής 1/.test(await page.textContent("#pl-basis")), "basis note names the selected digester");
+const olr1 = (await tile("OLR (kg VS/m³·d)")).v;
+await page.selectOption("#pl-unit", "un2");
+await waitFor(async () => (await planIds()) === (await latestIds("un2")));
+check((await planIds()) === (await latestIds("un2")), "switching back to Χωνευτής 2 replaces the lines (no carry-over)");
+check((await tile("OLR (kg VS/m³·d)")).v !== olr1, `OLR recomputed for the selected digester (${olr1} → ${(await tile("OLR (kg VS/m³·d)")).v})`);
+
+// (2)(3) production form: limits, flare hours, one log per digester/day, default = yesterday
+await go("production");
+check((await page.$$eval("#pr-body thead th", h => h.map(x => x.textContent))).includes("Ώρες πυρσού"), "production table shows flare hours");
+const yesterday = await page.evaluate(() => daysAgoDate(1));
+const prodRows = (u, d) => db(({ u, d }) => window.__BIOGAS_DEMO_DB__.production.filter(r => r.unit_id === u && r.log_date === d), { u, d });
+const prodCount = () => db(() => window.__BIOGAS_DEMO_DB__.production.length);
+const nProd = await prodCount();
+await page.click("#pr-new");
+await sleep(300);
+check((await page.inputValue("#prf-date")) === yesterday, `new log defaults to yesterday (${yesterday})`);
+await page.selectOption("#prf-u", "un1");
+await page.fill("#prf-ch4", "531"); await page.fill("#prf-h", "31"); await page.fill("#prf-gas", "-500"); await page.fill("#prf-el", "1080000");
+await page.click(".modal .foot .btn.primary");
+await sleep(300);
+const prodErr = await page.textContent("#prf-msg");
+check(/CH₄ 531/.test(prodErr) && /Ώρες ΣΗΘ 31/.test(prodErr) && /αρνητικό/.test(prodErr) && /μέγιστο δυνατό της ΣΗΘ/.test(prodErr),
+  "typos rejected with a reason each (CH₄ 531 %, 31 h, −500 m³, 1.08 GWh on a 500 kW CHP)");
+check((await prodCount()) === nProd && !!(await page.$(".modal")), "nothing saved, form stays open for correction");
+await page.fill("#prf-ch4", "52.8"); await page.fill("#prf-h", "21"); await page.fill("#prf-gas", "9800"); await page.fill("#prf-el", "10200");
+await page.fill("#prf-flare", "2.5");
+dialogs.length = 0;
+dismissNext = true;                                        // «Άκυρο» on the replace prompt → nothing changes
+await page.click(".modal .foot .btn.primary");
+await sleep(400);
+check(dialogs.some(m => /Υπάρχει ήδη εγγραφή/.test(m) && /Αντικατάσταση/.test(m)), "existing day → «replace?» prompt");
+check((await prodRows("un1", yesterday))[0].flare_hours !== 2.5, "declining the prompt keeps the existing log");
+await page.click(".modal .foot .btn.primary");               // accept this time
+await waitFor(async () => !(await page.$(".modal")));
+const rowsY = await prodRows("un1", yesterday);
+check(rowsY.length === 1 && rowsY[0].flare_hours === 2.5 && rowsY[0].ch4_pct === 52.8, "accepting replaces it — still one log, flare hours stored");
+check((await prodCount()) === nProd, `no duplicate production rows (${await prodCount()} = ${nProd})`);
+const dbDup = await page.evaluate(async d => (await sb.from("production").insert({ tenant_id: state.tenantId, unit_id: "un1", log_date: d })).error, yesterday);
+check(dbDup && dbDup.code === "23505", "backend rejects a second log for the same digester/day (unique key)");
+const dbChk = await page.evaluate(async () => (await sb.from("production").insert({ tenant_id: state.tenantId, unit_id: "un1", log_date: "2020-01-01", ch4_pct: 531 })).error);
+check(dbChk && dbChk.code === "23514", "backend rejects CH₄ 531 % (check constraint)");
+
+// (4) dates follow the plant's clock, not UTC (night shift at 00:30 Athens time)
+{
+  const ctx = await browser.newContext({ timezoneId: "Europe/Athens" });
+  const p2 = await ctx.newPage();
+  await p2.goto(URL, { waitUntil: "load" });
+  await sleep(800);
+  const r = await p2.evaluate(() => { const t = new Date("2026-11-24T22:30:00Z"); return { local: localDate(t), utc: t.toISOString().slice(0, 10) }; });
+  check(r.local === "2026-11-25" && r.utc === "2026-11-24", `00:30 Athens → ${r.local} (UTC would give ${r.utc})`);
+  await ctx.close();
+}
+
+// (5) digestate: warn BEFORE exceeding 170 kg N/ha
+await go("digestate");
+const nDig = await db(() => window.__BIOGAS_DEMO_DB__.digestate.length);
+await page.click("#dg-new");
+await sleep(500);
+await page.selectOption("#dgf-dest", "field");
+await page.fill("#dgf-rec", "Συνεταιρισμός Λάρισας — Τεμ. 4");
+await page.fill("#dgf-mass", "200");
+await sleep(200);
+const ytdHint = await page.textContent("#dgf-ytd");
+check(/Υπέρβαση ορίου/.test(ytdHint) && /του ορίου 170/.test(ytdHint), `form shows the year total incl. this application (${(ytdHint.match(/= ([\d.]+ kg N\/ha)/) || [])[1]})`);
+dialogs.length = 0;
+dismissNext = true;
+await page.click(".modal .foot .btn.primary");
+await sleep(400);
+check(dialogs.some(m => /kg N\/ha/.test(m) && /Αποθήκευση παρόλα αυτά/.test(m)), "saving over the limit asks for confirmation");
+check((await db(() => window.__BIOGAS_DEMO_DB__.digestate.length)) === nDig, "declining keeps the application unsaved");
+dialogs.length = 0;
+await page.fill("#dgf-rec", "Παπαδόπουλος Γ. — Αγροτεμάχιο 12");
+await page.fill("#dgf-mass", "5");
+await sleep(150);
+check(!/Υπέρβαση/.test(await page.textContent("#dgf-ytd")), "a field within the limit shows no excess warning");
+await page.click(".modal .foot .btn.primary");
+await waitFor(async () => !(await page.$(".modal")));
+check(dialogs.length === 0 && (await db(() => window.__BIOGAS_DEMO_DB__.digestate.length)) === nDig + 1, "within the limit → saved without a prompt");
+
+// (6) operators cannot change digesters or alarm limits (mirrors RLS of 0010)
+await page.evaluate(() => { state.profile = { ...state.profile, role: "operator", is_platform_admin: false }; });
+await go("units");
+check(!(await page.$("#btn-new-unit")) && !(await page.$("#units-body [data-del]")) && !(await page.$("#units-body [data-edit]")), "operator: no create/edit/delete on digesters");
+await go("params");
+check(!(await page.$("#btn-new-param")) && !(await page.$("#params-body [data-copy]")), "operator: alarm limits are read-only");
+await go("production");
+check(!!(await page.$("#pr-new")), "operator still records production");
+await page.evaluate(() => { state.profile = { ...state.profile, role: "admin", is_platform_admin: true }; });
+await go("units");
+check(!!(await page.$("#units-body [data-del]")), "admin keeps digester management");
+
+// (7) an invisible toast never swallows taps
+check((await page.$eval("#toast", t => getComputedStyle(t).pointerEvents)) === "none", "toast has pointer-events:none");
+await shot("9-production-form");
 
 console.log("English & mobile");
 await page.evaluate(() => localStorage.setItem("lp-lang", "en"));

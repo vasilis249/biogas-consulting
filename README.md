@@ -29,12 +29,14 @@ db/schema.sql                   # schema + RLS (Φάσεις 1–4, εκτός S
 db/seed.sql                     # default παράμετροι
 db/migrations/0003_phase3.sql   # invitations + audit triggers
 db/migrations/0004_phase4_storage.sql  # Storage bucket + policies (Supabase-only)
+db/migrations/0010_production_integrity_roles.sql  # 1 εγγραφή παραγωγής/χωνευτή/ημέρα, όρια, admin-only ρυθμίσεις
 docs/DESIGN.md                  # αρχιτεκτονική, data model, roadmap
 ```
 
 ## Setup
 1. Supabase project → `Project URL` + `anon key`.
 2. SQL editor: τρέξε `db/schema.sql`, μετά `db/seed.sql`, μετά `db/migrations/0004_phase4_storage.sql`.
+   Υπάρχουσα εγκατάσταση: τρέξε μόνο τις νέες migrations με τη σειρά (π.χ. `db/migrations/0010_production_integrity_roles.sql`) — είναι idempotent.
 3. Signup τον εαυτό σου· `update public.profiles set is_platform_admin = true where email = '…';`
 4. Άνοιξε το `index.html`, βάλε URL + anon key, login.
 
@@ -50,6 +52,7 @@ docs/DESIGN.md                  # αρχιτεκτονική, data model, roadma
 - ✅ Φάση 7 — Υποστρώματα, Τροφοδοσία (OLR/HRT), Χώνευμα (ΖΕΝ), Ειδοποιήσεις + email
 - ✅ Φάση 8 — Ισοζύγιο μάζας & ενέργειας (κλείσιμο, Van Kleeck VSR, η_el/η_th)
 - ✅ Φάση 9 — Αειφορία RED III: μείωση GHG (Παράρτημα VI) έναντι ορίου άρθρου 29(10) — βλ. [`docs/RED3.md`](docs/RED3.md)
+- ✅ Φάση 10 — Διορθώσεις P1 από την αξιολόγηση χειριστή (παραγωγή, σιτηρέσιο, χώνευμα, ρόλοι, ημερομηνίες) — βλ. [`docs/OPERATOR_REVIEW.md`](docs/OPERATOR_REVIEW.md) §0
 
 ## Tests
 ```bash
