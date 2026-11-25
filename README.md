@@ -43,5 +43,21 @@ docs/DESIGN.md                  # αρχιτεκτονική, data model, roadma
 - ✅ Φάση 1 — Auth, Dashboard, Δείγματα/Αναλύσεις, Μαζική καταχώρηση
 - ✅ Φάση 2 — Reports + Excel/CSV, διαχείριση Μονάδων & Παραμέτρων
 - ✅ Φάση 3 — Χρήστες & προσκλήσεις, 2FA (TOTP), Audit log
-- ✅ Φάση 4 — Αρχεία ανά δείγμα (Storage), Οικονομικά, Branding ανά πελάτη
-- ⏳ EL/EN i18n, email προσκλήσεων (Edge Function)
+- ✅ Φάση 4 — Αρχεία ανά δείγμα (Storage), Οικονομικά, Branding, EL/EN
+- ✅ Φάση 5 — forgot-password / email-OTP login, presence, Backup, Μηνιαία αναφορά
+- ✅ Φάση 6 — BioGas edition: biogas παράμετροι, μονάδες/χωνευτές, Παραγωγή + KPIs
+- ✅ Φάση 7 — Υποστρώματα, Τροφοδοσία (OLR/HRT), Χώνευμα (ΖΕΝ), Ειδοποιήσεις + email
+
+## Tests
+```bash
+tests/sql/run_local.sh                               # schema, RLS, alarm engine (PostgreSQL ≥ 15)
+```
+```bash
+node --experimental-strip-types --test tests/digest.test.mjs   # alert e-mail digest
+```
+```bash
+deno test --allow-env supabase/functions/send-alerts/handler.test.ts
+```
+```bash
+node demo/build.js && node tests/e2e/demo_smoke.mjs  # UI end-to-end (needs: npm i -D playwright)
+```

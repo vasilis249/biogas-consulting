@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>BioGas — Παραγωγή & Αναλύσεις</title>
+<title>BioGas — DEMO</title>
 <style>
   :root{
     --bg:#f3eee2; --surface:#fffdf8; --surface-2:#f8f2e7;
@@ -16,7 +16,7 @@
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%}
+  html,body{margin:0;height:100%;max-width:100%;overflow-x:hidden}
   body{font-family:var(--font);color:var(--ink);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;
        background:var(--bg);
        background-image:radial-gradient(1200px 600px at 100% -5%,rgba(45,106,73,.06),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(181,102,63,.05),transparent 55%);
@@ -60,8 +60,8 @@
        grid-template-areas:"side top" "side main"}
   .topbar{grid-area:top;display:flex;align-items:center;justify-content:space-between;gap:12px;
           padding:12px 22px;background:var(--surface);border-bottom:1px solid var(--border)}
-  .sidebar{grid-area:side;background:var(--surface);border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:4px}
-  .main{grid-area:main;padding:22px;overflow:auto}
+  .sidebar{grid-area:side;background:var(--surface);border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}
+  .main{grid-area:main;padding:22px;overflow:auto;min-width:0}
   .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);color:var(--ink);
             font-weight:600;font-size:14px;border:none;background:none;width:100%;text-align:left}
   .nav-item:hover{background:var(--surface-2)}
@@ -99,6 +99,18 @@
   .badge.low{background:#e4edfb;color:#1d4e9e}
   .badge.high{background:#fbe6e2;color:#9b2d1f}
   .badge.st{background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+  .badge.warnb{background:#fbf0dc;color:#8a5a0b}
+  th,td{white-space:nowrap}
+  .badge,.btn{white-space:nowrap}
+  .panel .body{overflow-x:auto}
+  .cell-wrap{white-space:normal;min-width:260px;max-width:520px}
+  .nav-badge{margin-left:auto;background:var(--warn);color:#fff;border-radius:999px;font-size:11px;font-weight:800;padding:1px 7px;line-height:1.5}
+  .nav-badge.crit{background:var(--high)}
+  .hint{border-radius:var(--r-sm);padding:10px 14px;margin-bottom:16px;font-size:13.5px;line-height:1.5}
+  .hint.warn{background:#fbf0dc;border:1px solid #f0dcb3;color:#6d4708}
+  .hint.ok{background:var(--primary-soft);border:1px solid #c7e3d4;color:#1f5c42}
+  .hint.info{background:var(--surface-2);border:1px solid var(--border);color:var(--muted)}
+  .hint ul{margin:4px 0 0;padding-left:18px}
   .dot-s{width:8px;height:8px;border-radius:50%;display:inline-block}
 
   /* ---------- modal ---------- */
@@ -119,7 +131,7 @@
 
   @media (max-width:820px){
     #app{grid-template-columns:1fr;grid-template-areas:"top" "main";}
-    .sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;z-index:40;transform:translateX(-105%);transition:.2s;box-shadow:var(--shadow)}
+    .sidebar{position:fixed;left:0;top:0;bottom:0;height:auto;width:230px;z-index:40;transform:translateX(-105%);transition:.2s;box-shadow:var(--shadow)}
     .sidebar.open{transform:none}
     .menu-btn{display:inline-flex !important}
     .scrim{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:39}
@@ -136,6 +148,7 @@
 </style>
 </head>
 <body>
+<div style="position:fixed;bottom:12px;right:12px;z-index:90;background:#b5663f;color:#fff;font:700 12px/1 -apple-system,Segoe UI,Roboto,sans-serif;padding:7px 11px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.18)" title="Δεδομένα επίδειξης στη μνήμη — επαναφορά με refresh">DEMO · δεδομένα επίδειξης</div>
 
 <!-- ============================ SETUP (Supabase keys) ============================ -->
 <div id="setup" class="center-wrap hidden">
@@ -182,10 +195,14 @@
     <button class="nav-item" data-view="samples"><span class="ic">🧪</span> Δείγματα</button>
     <button class="nav-item" data-view="bulk"><span class="ic">⊞</span> Μαζική καταχώρηση</button>
     <button class="nav-item" data-view="production"><span class="ic">⚡</span> Παραγωγή</button>
+    <button class="nav-item" data-view="feeding"><span class="ic">🌾</span> Τροφοδοσία</button>
+    <button class="nav-item" data-view="digestate"><span class="ic">♻</span> Χώνευμα</button>
+    <button class="nav-item" data-view="alerts"><span class="ic">🔔</span> Ειδοποιήσεις<span class="nav-badge hidden" id="alert-badge"></span></button>
     <button class="nav-item" data-view="reports"><span class="ic">📊</span> Reports</button>
     <div class="nav-sep"></div>
     <div class="small muted" style="padding:4px 12px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.05em">Διαχείριση</div>
     <button class="nav-item" data-view="units"><span class="ic">🏭</span> Μονάδες</button>
+    <button class="nav-item" data-view="feedstocks"><span class="ic">🧺</span> Υποστρώματα</button>
     <button class="nav-item" data-view="params"><span class="ic">⚙</span> Παράμετροι</button>
     <button class="nav-item nav-admin" data-view="finance"><span class="ic">€</span> Οικονομικά</button>
     <button class="nav-item nav-admin" data-view="users"><span class="ic">👥</span> Χρήστες</button>
@@ -219,110 +236,427 @@
 <div id="modal-root"></div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-/* ===== DEMO MODE: in-memory mock Supabase client — BioGas edition ===== */
+/* ============================================================================
+   BioGas DEMO — in-memory stand-in for the Supabase client (no backend).
+   Injected into demo/index.html by demo/build.js.
+
+   * Implements the subset of supabase-js the app uses (query builder, rpc,
+     auth incl. MFA/OTP stubs, storage stubs).
+   * Emulates the database: the feeding_daily view and the alarm triggers of
+     db/migrations/0007 (same thresholds, keys and messages), so alarms appear,
+     escalate and resolve while you click around.
+   * Seeds a physically consistent 2-digester plant and replays ~6 weeks of
+     operation in chronological order, so the alarm history is genuine.
+   Data lives in memory: a page refresh restores the seed.
+   ========================================================================== */
 (function(){
-  const uid=()=> (crypto.randomUUID?crypto.randomUUID():'id-'+Math.random().toString(16).slice(2));
-  const now=new Date(); const iso=(d)=>d.toISOString();
-  const daysAgo=(n)=>{const d=new Date(now); d.setDate(d.getDate()-n); return iso(d);};
-  const minsAgo=(n)=>{const d=new Date(now); d.setMinutes(d.getMinutes()-n); return iso(d);};
-  const T='11111111-1111-1111-1111-111111111111';
-  const DB={
-    tenants:[{id:T,name:'Βιοαέριο Θεσσαλίας ΑΕ',slug:'biogas-thess',settings:{brand_color:'#2d6a49'},created_at:daysAgo(120)}],
-    profiles:[
-      {id:'demo-user',email:'demo@biogas.gr',full_name:'Μηχανικός Λειτουργίας',role:'admin',is_platform_admin:true,tenant_id:T,last_seen:minsAgo(0),created_at:daysAgo(120)},
-      {id:'u2',email:'operator@biogas.gr',full_name:'Χειριστής Βάρδιας',role:'operator',is_platform_admin:false,tenant_id:T,last_seen:minsAgo(4),created_at:daysAgo(60)},
-      {id:'u3',email:'consultant@biogas.gr',full_name:'Σύμβουλος',role:'viewer',is_platform_admin:false,tenant_id:null,last_seen:null,created_at:daysAgo(3)}
+  "use strict";
+  // ---------------------------------------------------------------- utils --
+  let seq = 0;
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "id-" + (++seq) + "-" + Math.random().toString(16).slice(2));
+  const rnd = (() => { let a = 20261122; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();
+  const vary = (x, pct) => x * (1 + (rnd() * 2 - 1) * pct);
+  const r1 = x => Math.round(x * 10) / 10, r2 = x => Math.round(x * 100) / 100, r10 = x => Math.round(x / 10) * 10;
+  const NOW = new Date();
+  const iso = d => d.toISOString();
+  const dayAt = (daysAgo, h = 9, m = 0) => { const d = new Date(NOW); d.setDate(d.getDate() - daysAgo); d.setHours(h, m, 0, 0); return d; };
+  const dateStr = daysAgo => { const d = dayAt(daysAgo, 12); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  const ddmmyyyy = s => s.slice(8, 10) + "/" + s.slice(5, 7) + "/" + s.slice(0, 4);
+  const pgnum = v => String(v);                       // numeric::text
+
+  // ------------------------------------------------------------- database --
+  const T = "11111111-1111-1111-1111-111111111111";
+  const ME = "demo-user", OP = "u-operator", CONS = "u-consultant";
+  const DB = {
+    tenants: [{ id: T, name: "Βιοαέριο Θεσσαλίας ΑΕ", slug: "biogas-thess", settings: { brand_color: "#2d6a49" }, created_at: iso(dayAt(400)) }],
+    profiles: [
+      { id: ME,   email: "demo@biogas.gr",       full_name: "Μηχανικός Λειτουργίας", role: "admin",    is_platform_admin: true,  tenant_id: T, last_seen: iso(NOW), created_at: iso(dayAt(400)) },
+      { id: OP,   email: "operator@biogas.gr",   full_name: "Χειριστής Βάρδιας",     role: "operator", is_platform_admin: false, tenant_id: T, last_seen: iso(new Date(NOW - 3 * 60000)), created_at: iso(dayAt(200)) },
+      { id: CONS, email: "consultant@biogas.gr", full_name: "Σύμβουλος Διεργασίας",  role: "viewer",   is_platform_admin: false, tenant_id: T, last_seen: iso(dayAt(2, 17)), created_at: iso(dayAt(90)) },
+      { id: "u-new", email: "neos@biogas.gr",    full_name: "Νέος Χρήστης",          role: "viewer",   is_platform_admin: false, tenant_id: null, last_seen: null, created_at: iso(dayAt(1)) },
     ],
-    parameters:[
-      ['ph_dig','pH χωνευτή','Digester pH','',7.4,8.2,10],['fos_tac','FOS/TAC','FOS/TAC','',0.2,0.4,20],
-      ['temp_dig','Θερμοκρασία χωνευτή','Digester temp','°C',38,42,30],['ts','Ξηρά ουσία (TS)','TS','%',7,12,40],
-      ['vs','Οργανική ουσία (VS)','VS','% TS',70,85,50],['vfa','Πτητικά οξέα (VFA)','VFA','mg/l',0,2000,60],
-      ['nh4','Αμμωνιακό N (NH₄-N)','Ammonium N','mg/l',500,3000,70],['ch4','Μεθάνιο (CH₄)','Methane','%',50,60,80],
-      ['co2','Διοξείδιο (CO₂)','CO2','%',38,48,90],['h2s','Υδρόθειο (H₂S)','H2S','ppm',0,300,100],['o2','Οξυγόνο (O₂)','O2','%',0,1,110]
-    ].map(r=>({id:'p-'+r[0],tenant_id:null,code:r[0],label_el:r[1],label_en:r[2],default_unit:r[3],ideal_min:r[4],ideal_max:r[5],sort_order:r[6]})),
-    units:[{id:'un1',tenant_id:T,name:'Χωνευτής 1',location:'Γραμμή Α',capacity_kw:500,digester_m3:2500,notes:null,created_at:daysAgo(110)},
-           {id:'un2',tenant_id:T,name:'Χωνευτής 2',location:'Γραμμή Β',capacity_kw:999,digester_m3:4000,notes:null,created_at:daysAgo(100)}],
-    samples:[], analyses:[], files:[], audit_log:[], production:[],
-    invoices:[
-      {id:'i1',tenant_id:T,period:now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'),amount:1200,currency:'EUR',status:'issued',issued_at:daysAgo(5).slice(0,10),notes:'Σύμβουλος λειτουργίας',created_at:daysAgo(5)},
-      {id:'i2',tenant_id:T,period:now.getFullYear()+'-'+String(now.getMonth()).padStart(2,'0'),amount:1200,currency:'EUR',status:'paid',issued_at:daysAgo(35).slice(0,10),notes:null,created_at:daysAgo(35)}
+    parameters: [
+      ["ph_dig", "pH χωνευτή", "Digester pH", "", 7.4, 8.2, 10], ["fos_tac", "FOS/TAC", "FOS/TAC", "", 0.2, 0.4, 20],
+      ["temp_dig", "Θερμοκρασία χωνευτή", "Digester temp", "°C", 38, 42, 30], ["ts", "Ξηρά ουσία (TS)", "TS", "%", 7, 12, 40],
+      ["vs", "Οργανική ουσία (VS)", "VS", "% TS", 70, 85, 50], ["vfa", "Πτητικά οξέα (VFA)", "VFA", "mg/l", 0, 2000, 60],
+      ["nh4", "Αμμωνιακό N (NH₄-N)", "Ammonium N", "mg/l", 500, 3000, 70], ["ch4", "Μεθάνιο (CH₄)", "Methane", "%", 50, 60, 80],
+      ["co2", "Διοξείδιο (CO₂)", "CO2", "%", 38, 48, 90], ["h2s", "Υδρόθειο (H₂S)", "H2S", "ppm", 0, 300, 100],
+      ["o2", "Οξυγόνο (O₂)", "O2", "%", 0, 1, 110],
+      ["dig_n", "Ολικό άζωτο χωνεύματος (N)", "Digestate total N", "kg/t", null, null, 120],
+      ["dig_p2o5", "Φώσφορος χωνεύματος (P₂O₅)", "Digestate P2O5", "kg/t", null, null, 130],
+      ["dig_k2o", "Κάλιο χωνεύματος (K₂O)", "Digestate K2O", "kg/t", null, null, 140],
+    ].map(r => ({ id: "p-" + r[0], tenant_id: null, code: r[0], label_el: r[1], label_en: r[2], default_unit: r[3], ideal_min: r[4], ideal_max: r[5], sort_order: r[6], created_at: iso(dayAt(400)) })),
+    feedstocks: [
+      ["cattle", "Υγρή κοπριά βοοειδών", "manure", 8, 80, 210, 0, 10], ["cattle_s", "Στερεή κοπριά βοοειδών", "manure", 22, 80, 230, 0, 18],
+      ["pig", "Υγρή κοπριά χοίρων", "manure", 5, 75, 300, 0, 8], ["poultry", "Κοπριά πουλερικών", "manure", 40, 75, 280, 5, 8],
+      ["maize", "Ενσίρωμα αραβοσίτου", "energy_crop", 33, 95, 340, 40, 40], ["grass", "Ενσίρωμα χόρτου / τριφυλλιού", "energy_crop", 30, 90, 300, 30, 20],
+      ["whey", "Τυρόγαλα (ορός γάλακτος)", "agro_industrial", 6, 85, 450, 0, 15], ["omw", "Κατσίγαρος (απόνερα ελαιοτριβείου)", "agro_industrial", 10, 80, 400, 0, 30],
+      ["pomace", "Ελαιοπυρήνας (υγρός, 2 φάσεων)", "agro_industrial", 30, 90, 330, 0, 45], ["citrus", "Φλούδες εσπεριδοειδών", "agro_industrial", 20, 95, 380, 0, 30],
+      ["rumen", "Περιεχόμενο στομάχων (σφαγεία)", "agro_industrial", 15, 85, 350, -10, 20], ["food", "Απόβλητα τροφίμων / εστίασης", "food_waste", 25, 90, 450, -20, 18],
+      ["glycerin", "Ακατέργαστη γλυκερίνη", "other", 80, 95, 450, 50, 150],
+    ].map(r => ({ id: "fs-" + r[0], tenant_id: null, name: r[1], category: r[2], ts_pct: r[3], vs_pct: r[4], bmp: r[5], price_eur_t: r[6], cn_ratio: r[7],
+      notes: "Ενδεικτικές τιμές βιβλιογραφίας — επιβεβαιώστε με ανάλυση TS/VS/BMP", active: true, created_at: iso(dayAt(400)) }))
+      .concat([{ id: "fs-t-sorghum", tenant_id: T, name: "Ενσίρωμα σόργου (ιδίας παραγωγής)", category: "energy_crop", ts_pct: 28, vs_pct: 93, bmp: 310,
+        price_eur_t: 32, cn_ratio: 35, notes: "Ανάλυση εργαστηρίου 09/2026", active: true, created_at: iso(dayAt(70)) }]),
+    units: [
+      { id: "un1", tenant_id: T, name: "Χωνευτής 1", location: "Γραμμή Α", capacity_kw: 500, digester_m3: 2500, notes: "CSTR μεσόφιλος", created_at: iso(dayAt(400)) },
+      { id: "un2", tenant_id: T, name: "Χωνευτής 2", location: "Γραμμή Β", capacity_kw: 999, digester_m3: 4000, notes: "CSTR μεσόφιλος", created_at: iso(dayAt(380)) },
     ],
-    invitations:[{id:'inv1',tenant_id:T,email:'neos@biogas.gr',role:'operator',invited_by:'demo-user',created_at:daysAgo(2),accepted_at:null}]
+    recipes: [], samples: [], analyses: [], production: [], feeding: [], digestate: [], files: [], audit_log: [], alerts: [],
+    alert_recipients: [
+      { id: "ar1", tenant_id: T, email: "demo@biogas.gr", min_severity: "warning", enabled: true, created_at: iso(dayAt(60)) },
+      { id: "ar2", tenant_id: T, email: "owner@biogas.gr", min_severity: "critical", enabled: true, created_at: iso(dayAt(60)) },
+      { id: "ar3", tenant_id: T, email: "consultant@biogas.gr", min_severity: "warning", enabled: false, created_at: iso(dayAt(30)) },
+    ],
+    invoices: [
+      { id: "i1", tenant_id: T, period: dateStr(0).slice(0, 7), amount: 1200, currency: "EUR", status: "issued", issued_at: dateStr(5), notes: "Συμβουλευτική λειτουργίας", created_at: iso(dayAt(5)) },
+      { id: "i2", tenant_id: T, period: dateStr(31).slice(0, 7), amount: 1200, currency: "EUR", status: "paid", issued_at: dateStr(35), notes: null, created_at: iso(dayAt(35)) },
+    ],
+    invitations: [{ id: "inv1", tenant_id: T, email: "vardia2@biogas.gr", role: "operator", invited_by: ME, created_at: iso(dayAt(2)), accepted_at: null }],
   };
-  const mk=(code,unit,kind,day,vals)=>{ const sid='s-'+code;
-    DB.samples.push({id:sid,tenant_id:T,unit_id:unit,code,kind,status:'done',taken_at:daysAgo(day).slice(0,10),notes:null,created_by:'demo-user',created_at:daysAgo(day)});
-    Object.entries(vals).forEach(([c,v])=>DB.analyses.push({id:uid(),tenant_id:T,sample_id:sid,parameter_id:'p-'+c,value:v,unit:(DB.parameters.find(p=>p.code===c)||{}).default_unit||null,measured_at:daysAgo(day),created_by:'demo-user',created_at:daysAgo(day)}));
-  };
-  // digester stability + gas quality samples (some out of range)
-  mk('D1-W47','un1','digester',2,{ph_dig:7.8,fos_tac:0.28,temp_dig:41,ts:9.2,vs:78,vfa:850,nh4:2100});
-  mk('G1-W47','un1','biogas',2,{ch4:53,co2:44,h2s:180,o2:0.3});
-  mk('D2-W47','un2','digester',3,{ph_dig:7.5,fos_tac:0.55,temp_dig:40,ts:8.1,vs:75,vfa:3100,nh4:2600}); // FOS/TAC & VFA high
-  mk('G2-W47','un2','biogas',3,{ch4:48,co2:49,h2s:450,o2:0.5}); // CH4 low, H2S high
-  mk('D1-W46','un1','digester',9,{ph_dig:7.9,fos_tac:0.26,temp_dig:41,ts:9.5,vs:79});
-  // production logs — last 16 days, current month
-  const pd=(dayOffset,unit,feed,gas,ch4,el,th,h)=>DB.production.push({id:uid(),tenant_id:T,unit_id:unit,log_date:daysAgo(dayOffset).slice(0,10),feedstock_t:feed,biogas_m3:gas,ch4_pct:ch4,kwh_el:el,kwh_th:th,chp_hours:h,notes:null,created_by:'demo-user',created_at:daysAgo(dayOffset)});
-  for(let i=1;i<=16;i++){ const j=(i*7)%5;
-    pd(i,'un1', 21+j*0.5, 10200+j*120, 52.5+ (j%3)*0.5, 11300+j*90, 6800+j*60, 23.5 - (i===4?4:0));  // day 4 a dip
-    pd(i,'un2', 30+j*0.6, 17800+j*150, 53.0+ (j%2)*0.4, 20500+j*110, 12000+j*80, 23.7);
-  }
-  DB.audit_log=[
-    {id:1,tenant_id:T,user_id:'demo-user',action:'insert',entity:'production',entity_id:uid(),created_at:daysAgo(1)},
-    {id:2,tenant_id:T,user_id:'u2',action:'insert',entity:'analyses',entity_id:uid(),created_at:daysAgo(2)},
-    {id:3,tenant_id:T,user_id:'demo-user',action:'update',entity:'units',entity_id:'un2',created_at:daysAgo(5)},
-    {id:4,tenant_id:T,user_id:'u2',action:'insert',entity:'samples',entity_id:'s-D2-W47',created_at:daysAgo(3)}
+  const F = id => DB.feedstocks.find(f => f.id === id) || {};
+  const U = id => DB.units.find(u => u.id === id);
+  const uname = id => (U(id) || {}).name || "—";
+  const sampleUnit = sid => { const s = DB.samples.find(x => x.id === sid); return s ? (s.unit_id || null) : null; };
+  DB.recipes = [
+    { id: "rc1", tenant_id: T, unit_id: "un1", name: "Βασικό σιτηρέσιο — Χωνευτής 1", notes: null, created_by: ME, created_at: iso(dayAt(90)),
+      items: [{ feedstock_id: "fs-maize", mass_t: 22 }, { feedstock_id: "fs-cattle", mass_t: 30 }, { feedstock_id: "fs-whey", mass_t: 8 }] },
+    { id: "rc2", tenant_id: T, unit_id: "un2", name: "Βασικό σιτηρέσιο — Χωνευτής 2", notes: null, created_by: ME, created_at: iso(dayAt(90)),
+      items: [{ feedstock_id: "fs-maize", mass_t: 25 }, { feedstock_id: "fs-poultry", mass_t: 9 }, { feedstock_id: "fs-pomace", mass_t: 12 },
+              { feedstock_id: "fs-pig", mass_t: 35 }, { feedstock_id: "fs-food", mass_t: 3 }] },
+    { id: "rc3", tenant_id: T, unit_id: "un2", name: "Χειμερινό με κατσίγαρο — Χωνευτής 2", notes: "Περίοδος ελαιοτριβείων", created_by: ME, created_at: iso(dayAt(40)),
+      items: [{ feedstock_id: "fs-maize", mass_t: 22 }, { feedstock_id: "fs-poultry", mass_t: 8 }, { feedstock_id: "fs-pomace", mass_t: 10 },
+              { feedstock_id: "fs-pig", mass_t: 35 }, { feedstock_id: "fs-omw", mass_t: 15 }, { feedstock_id: "fs-food", mass_t: 3 }] },
   ];
-  const rel={
-    samples:r=>({...r, unit:DB.units.find(u=>u.id===r.unit_id)||null}),
-    production:r=>({...r, unit:DB.units.find(u=>u.id===r.unit_id)||null}),
-    analyses:r=>({...r, parameter:DB.parameters.find(p=>p.id===r.parameter_id)||null,
-                  sample:(()=>{const s=DB.samples.find(x=>x.id===r.sample_id); return s?{...s,unit:DB.units.find(u=>u.id===s.unit_id)||null}:null;})()}),
-    audit_log:r=>({...r, actor:DB.profiles.find(p=>p.id===r.user_id)||null})
-  };
-  const attach=(t,r)=> rel[t]?rel[t](r):r;
-  function run(st){
-    const t=st.table; let rows=(DB[t]||[]);
-    if(st._op==='insert'){ const arr=Array.isArray(st._payload)?st._payload:[st._payload];
-      const ins=arr.map(o=>({id:uid(),created_at:iso(new Date()),...o})); DB[t]=rows.concat(ins);
-      return {data:st._single?ins[0]:ins,error:null}; }
-    if(st._op==='update'){ rows.filter(r=>st.filters.every(f=>f(r))).forEach(r=>Object.assign(r,st._payload)); return {data:null,error:null}; }
-    if(st._op==='delete'){ DB[t]=rows.filter(r=>!st.filters.every(f=>f(r))); return {data:null,error:null}; }
-    let out=rows.filter(r=>st.filters.every(f=>f(r))); const count=out.length;
-    if(st.orders.length) out=out.slice().sort((a,b)=>{ for(const o of st.orders){ const x=a[o.c],y=b[o.c]; if(x==null&&y==null)continue; if(x==null)return o.asc?-1:1; if(y==null)return o.asc?1:-1; if(x<y)return o.asc?-1:1; if(x>y)return o.asc?1:-1; } return 0; });
-    if(st._limit!=null) out=out.slice(0,st._limit);
-    out=out.map(r=>attach(t,r));
-    if(st._head&&st._count) return {count,data:null,error:null};
-    if(st._single||st._maybeSingle) return {data:out[0]||null,error:null,count};
-    return {data:out,error:null,count};
+
+  // ------------------------------------------- alarm engine (mirrors 0007) --
+  function raise(t, unit, kind, metric, value, sev, msg, key, at) {
+    const ex = DB.alerts.find(a => a.dedupe_key === key);
+    if (!ex) {
+      DB.alerts.push({ id: uid(), tenant_id: t, unit_id: unit, kind, metric, value, severity: sev, message: msg, dedupe_key: key,
+        created_at: at, updated_at: at, acknowledged_at: null, acknowledged_by: null, resolved_at: null, emailed_at: null });
+      return;
+    }
+    const reopen = ex.resolved_at != null, escalate = ex.severity === "warning" && sev === "critical";
+    Object.assign(ex, { unit_id: unit, metric, value, message: msg, severity: sev, updated_at: at });
+    if (reopen) ex.created_at = at;
+    if (reopen || escalate) { ex.acknowledged_at = null; ex.acknowledged_by = null; ex.emailed_at = null; }
+    ex.resolved_at = null;
   }
-  function query(table){
-    const st={table,filters:[],orders:[],_limit:null,_single:false,_maybeSingle:false,_count:false,_head:false,_op:'select',_payload:null};
-    const add=f=>{st.filters.push(f);return api;};
-    const api={ select:(c,o)=>{if(o&&o.count)st._count=true;if(o&&o.head)st._head=true;return api;},
-      insert:(r)=>{st._op='insert';st._payload=r;return api;}, update:(o)=>{st._op='update';st._payload=o;return api;}, delete:()=>{st._op='delete';return api;},
-      eq:(c,v)=>add(r=>String(r[c])===String(v)), is:(c,v)=>add(r=> v===null?(r[c]==null):r[c]===v),
-      gte:(c,v)=>add(r=>r[c]!=null&&r[c]>=v), lte:(c,v)=>add(r=>r[c]!=null&&r[c]<=v), lt:(c,v)=>add(r=>r[c]!=null&&r[c]<v),
-      or:(s)=>add(r=>s.split(',').some(p=>{const[c,op,...rest]=p.split('.');const v=rest.join('.');if(op==='is'&&v==='null')return r[c]==null;if(op==='eq')return String(r[c])===v;return false;})),
-      order:(c,o)=>{st.orders.push({c,asc:!(o&&o.ascending===false)});return api;}, limit:(n)=>{st._limit=n;return api;},
-      single:()=>{st._single=true;return api;}, maybeSingle:()=>{st._maybeSingle=true;return api;},
-      then:(res,rej)=>Promise.resolve(run(st)).then(res,rej) };
+  function clear(key, at) {
+    const ex = DB.alerts.find(a => a.dedupe_key === key && a.resolved_at == null);
+    if (ex) { ex.resolved_at = at; ex.updated_at = at; }
+  }
+  function evalParam(t, unit, param, at) {
+    if (!t || !param) return;
+    const key = `param:${t}:${unit || "none"}:${param}`;
+    const a = DB.analyses.filter(x => x.tenant_id === t && x.parameter_id === param && sampleUnit(x.sample_id) === (unit || null))
+      .sort((p, q) => String(q.measured_at || q.created_at).localeCompare(String(p.measured_at || p.created_at)) || String(q.created_at).localeCompare(String(p.created_at)))[0];
+    if (!a || a.value == null) return clear(key, at);
+    const p = DB.parameters.find(x => x.id === param);
+    if (!p || (p.ideal_min == null && p.ideal_max == null)) return clear(key, at);
+    const v = Number(a.value);
+    if ((p.ideal_min != null && v < p.ideal_min) || (p.ideal_max != null && v > p.ideal_max)) {
+      let span = (p.ideal_max != null && p.ideal_min != null) ? p.ideal_max - p.ideal_min : null;
+      if (span == null || span <= 0) span = Math.max(Math.abs(p.ideal_max ?? p.ideal_min), 1);
+      const sev = ((p.ideal_min != null && v < p.ideal_min - 0.2 * span) || (p.ideal_max != null && v > p.ideal_max + 0.2 * span)) ? "critical" : "warning";
+      const s = DB.samples.find(x => x.id === a.sample_id) || {};
+      raise(t, unit || null, "parameter", p.label_el || p.code, v, sev,
+        `${p.label_el || p.code} = ${pgnum(v)}${a.unit ? " " + a.unit : ""} εκτός ορίων [${p.ideal_min ?? "−∞"} – ${p.ideal_max ?? "+∞"}] · ${uname(unit)} · δείγμα ${s.code || "—"}`, key, at);
+    } else clear(key, at);
+  }
+  function evalProduction(t, unit, at) {
+    if (!t) return;
+    const kc = `prod-ch4:${t}:${unit || "none"}`, kp = `prod-chp:${t}:${unit || "none"}`;
+    const r = DB.production.filter(x => x.tenant_id === t && (x.unit_id || null) === (unit || null))
+      .sort((a, b) => String(b.log_date).localeCompare(String(a.log_date)) || String(b.created_at).localeCompare(String(a.created_at)))[0];
+    if (!r) { clear(kc, at); clear(kp, at); return; }
+    if (r.ch4_pct != null && r.ch4_pct < 50)
+      raise(t, unit, "production", "CH₄ %", r.ch4_pct, r.ch4_pct < 45 ? "critical" : "warning",
+        `Χαμηλό μεθάνιο ${pgnum(r.ch4_pct)}% στο βιοαέριο · ${uname(unit)} · ${ddmmyyyy(r.log_date)}`, kc, at);
+    else clear(kc, at);
+    if (r.chp_hours != null && r.chp_hours < 20)
+      raise(t, unit, "production", "Ώρες ΣΗΘ", r.chp_hours, r.chp_hours < 16 ? "critical" : "warning",
+        `Χαμηλή διαθεσιμότητα ΣΗΘ: ${pgnum(r.chp_hours)} ώρες (${Math.round(r.chp_hours / 24 * 100)}%) · ${uname(unit)} · ${ddmmyyyy(r.log_date)}`, kp, at);
+    else clear(kp, at);
+  }
+  function feedingDaily() {
+    const g = {};
+    DB.feeding.forEach(f => {
+      const k = f.tenant_id + "|" + (f.unit_id || "") + "|" + f.feed_date, fs = F(f.feedstock_id), m = Number(f.mass_t) || 0;
+      const o = g[k] || (g[k] = { tenant_id: f.tenant_id, unit_id: f.unit_id, feed_date: f.feed_date, lines: 0, mass_t: 0, vs_t: 0, ch4_expected_m3: 0, cost_eur: 0 });
+      const vs = m * (fs.ts_pct || 0) / 100 * (fs.vs_pct || 0) / 100;
+      o.lines++; o.mass_t += m; o.vs_t += vs; o.ch4_expected_m3 += vs * (fs.bmp || 0); o.cost_eur += m * (fs.price_eur_t || 0);
+    });
+    return Object.values(g).map(o => { const vol = (U(o.unit_id) || {}).digester_m3;
+      return { ...o, olr: vol > 0 ? o.vs_t * 1000 / vol : null, hrt: (vol > 0 && o.mass_t > 0) ? vol / o.mass_t : null }; });
+  }
+  function evalFeeding(t, unit, at) {
+    if (!t) return;
+    const ko = `olr:${t}:${unit || "none"}`, kh = `hrt:${t}:${unit || "none"}`;
+    const days = feedingDaily().filter(d => d.tenant_id === t && d.unit_id === unit && unit).sort((a, b) => b.feed_date.localeCompare(a.feed_date));
+    const d = days[0];
+    if (!d || d.olr == null) { clear(ko, at); clear(kh, at); return; }
+    if (d.olr > 4) raise(t, unit, "feeding", "OLR", r2(d.olr), d.olr > 5 ? "critical" : "warning",
+      `Υψηλό οργανικό φορτίο OLR ${r2(d.olr).toFixed(2)} kg VS/m³·d (όριο 4) · ${uname(unit)} · ${ddmmyyyy(d.feed_date)}`, ko, at);
+    else clear(ko, at);
+    if (d.hrt != null && d.hrt < 20) raise(t, unit, "feeding", "HRT", r1(d.hrt), d.hrt < 15 ? "critical" : "warning",
+      `Μικρός χρόνος παραμονής HRT ${r1(d.hrt).toFixed(1)} ημέρες (ελάχ. 20) · ${uname(unit)} · ${ddmmyyyy(d.feed_date)}`, kh, at);
+    else clear(kh, at);
+  }
+  function evalDigestate(t, recipient, year, at) {
+    const rec = String(recipient || "").trim().toLowerCase();
+    if (!t || !rec || !year) return;
+    const key = `dig-n:${t}:${rec}:${year}`;
+    const rows = DB.digestate.filter(r => r.tenant_id === t && r.destination === "field" && String(r.recipient || "").trim().toLowerCase() === rec && String(r.log_date).slice(0, 4) === String(year));
+    const n = rows.reduce((s, r) => s + (Number(r.mass_t) || 0) * (Number(r.n_kg_t) || 0), 0);
+    const area = rows.reduce((m, r) => Math.max(m, Number(r.field_area_ha) || 0), 0);
+    if (!area || n <= 0) return clear(key, at);
+    const nha = n / area, lim = 170;
+    if (nha >= lim * 0.9) raise(t, null, "digestate", "kg N/ha", r1(nha), nha > lim ? "critical" : "warning",
+      `Άζωτο από χώνευμα ${r1(nha).toFixed(1)} kg N/ha το ${year} για «${String(recipient).trim()}» (όριο ΖΕΝ ${lim} kg N/ha/έτος)`, key, at);
+    else clear(key, at);
+  }
+  // "triggers": run after every write, like the AFTER ROW triggers in SQL
+  function afterWrite(table, oldRows, newRows, at) {
+    const each = (rows, fn) => rows.forEach(r => r && fn(r));
+    if (table === "analyses") {
+      each(newRows, r => evalParam(r.tenant_id, sampleUnit(r.sample_id), r.parameter_id, at));
+      each(oldRows, r => evalParam(r.tenant_id, sampleUnit(r.sample_id), r.parameter_id, at));
+    } else if (table === "production") {
+      each(newRows, r => evalProduction(r.tenant_id, r.unit_id, at)); each(oldRows, r => evalProduction(r.tenant_id, r.unit_id, at));
+    } else if (table === "feeding") {
+      each(newRows, r => evalFeeding(r.tenant_id, r.unit_id, at)); each(oldRows, r => evalFeeding(r.tenant_id, r.unit_id, at));
+    } else if (table === "digestate") {
+      each(newRows, r => evalDigestate(r.tenant_id, r.recipient, String(r.log_date).slice(0, 4), at));
+      each(oldRows, r => evalDigestate(r.tenant_id, r.recipient, String(r.log_date).slice(0, 4), at));
+    } else if (table === "units") {
+      each(newRows, r => evalFeeding(r.tenant_id, r.id, at));
+    } else if (table === "feedstocks") {
+      each(newRows, f => [...new Set(DB.feeding.filter(x => x.feedstock_id === f.id).map(x => x.tenant_id + "|" + x.unit_id))]
+        .forEach(k => { const [t, u] = k.split("|"); evalFeeding(t, u, at); }));
+    }
+    const AUDITED = ["units", "parameters", "samples", "analyses", "invoices", "profiles", "files", "production", "feedstocks", "recipes", "feeding", "digestate", "alert_recipients"];
+    const heartbeatOnly = table === "profiles" && oldRows.length && newRows.length && newRows.every((r, i) => {
+      const o = { ...oldRows[i] }, n = { ...r }; delete o.last_seen; delete n.last_seen; return JSON.stringify(o) === JSON.stringify(n); });
+    if (AUDITED.includes(table) && !heartbeatOnly) {
+      const action = !oldRows.length ? "insert" : (!newRows.length ? "delete" : "update");
+      (newRows.length ? newRows : oldRows).forEach(r => DB.audit_log.push({ id: DB.audit_log.length + 1, tenant_id: r.tenant_id ?? null,
+        user_id: currentUser, action, entity: table, entity_id: r.id, meta: {}, created_at: at }));
+    }
+  }
+  let currentUser = ME;
+
+  // ------------------------------------------------- seed: 6-week replay --
+  const CH4_KWH = 9.97, ETA = 0.40;
+  const events = [];   // {at: Date, run: fn}
+  const ev = (at, run) => events.push({ at, run });
+  const insertRows = (table, rows, at, user) => { currentUser = user || OP; rows.forEach(r => DB[table].push(r)); afterWrite(table, [], rows, iso(at)); };
+  const mix = items => items.reduce((o, it) => { const f = F(it.feedstock_id), vs = it.mass_t * f.ts_pct / 100 * f.vs_pct / 100;
+    o.vs += vs; o.ch4 += vs * f.bmp; return o; }, { vs: 0, ch4: 0 });
+  const DAYS = 42;
+  for (let d = DAYS; d >= 1; d--) {
+    for (const unit of ["un1", "un2"]) {
+      let items;
+      if (unit === "un1") items = [{ feedstock_id: "fs-maize", mass_t: r1(vary(22, 0.03)) }, { feedstock_id: "fs-cattle", mass_t: r1(vary(30, 0.05)) }, { feedstock_id: "fs-whey", mass_t: r1(vary(8, 0.08)) }];
+      else if (d === 1) items = [{ feedstock_id: "fs-maize", mass_t: 28 }, { feedstock_id: "fs-poultry", mass_t: 9 }, { feedstock_id: "fs-pomace", mass_t: 12 },
+                                 { feedstock_id: "fs-pig", mass_t: 35 }, { feedstock_id: "fs-food", mass_t: 6 }];   // overload → OLR > 4
+      else items = (d <= 20 ? DB.recipes[2] : DB.recipes[1]).items.map(it => ({ ...it, mass_t: r1(vary(it.mass_t, 0.04)) }));
+      const fdate = dateStr(d);
+      ev(dayAt(d, 7, 30), () => insertRows("feeding", items.map(it => ({ id: uid(), tenant_id: T, unit_id: unit, feed_date: fdate,
+        feedstock_id: it.feedstock_id, mass_t: it.mass_t, created_by: OP, created_at: iso(dayAt(d, 7, 30)) })), dayAt(d, 7, 30)));
+      // production for that day, entered next morning
+      const m = mix(items), cap = U(unit).capacity_kw;
+      let eff = vary(unit === "un1" ? 0.955 : 0.945, 0.012), ch4p = r1(vary(53.2, 0.01)), chp = r1(vary(23.6, 0.008));
+      if (unit === "un1" && d === 12) chp = 19.5;                                     // CHP maintenance
+      if (unit === "un2" && d <= 3) { eff = { 3: 0.92, 2: 0.90, 1: 0.88 }[d]; ch4p = { 3: 51.2, 2: 50.4, 1: 49.2 }[d]; }   // acidification
+      const ch4 = m.ch4 * eff, kwh = Math.min(ch4 * CH4_KWH * ETA, cap * chp);
+      const at = dayAt(d - 1, 8, 10);
+      ev(at, () => insertRows("production", [{ id: uid(), tenant_id: T, unit_id: unit, log_date: fdate,
+        feedstock_t: r1(items.reduce((s, i) => s + i.mass_t, 0)), biogas_m3: r10(ch4 / (ch4p / 100)), ch4_pct: ch4p,
+        kwh_el: r10(kwh), kwh_th: r10(kwh * 1.05), chp_hours: chp, flare_hours: 0, notes: chp < 20 ? "Συντήρηση ΣΗΘ (αλλαγή λαδιών)" : null,
+        created_by: OP, created_at: iso(at) }], at));
+    }
+  }
+  // weekly lab samples: digester stability + gas quality (Χωνευτής 2 drifts into acidification)
+  const sample = (daysAgo, unit, kind, code, vals, user) => {
+    const sid = "s-" + code, at = dayAt(daysAgo, 9), res = dayAt(daysAgo, 15);
+    ev(at, () => insertRows("samples", [{ id: sid, tenant_id: T, unit_id: unit, code, kind, status: "done", taken_at: dateStr(daysAgo),
+      notes: null, created_by: user || OP, created_at: iso(at) }], at, user));
+    ev(res, () => insertRows("analyses", Object.entries(vals).map(([c, v]) => ({ id: uid(), tenant_id: T, sample_id: sid, parameter_id: "p-" + c,
+      value: v, unit: (DB.parameters.find(p => p.code === c) || {}).default_unit || null, method: null, measured_at: iso(at),
+      created_by: user || OP, created_at: iso(res) })), res, user));
+  };
+  const wk = [35, 28, 21, 14, 7];
+  wk.forEach((d, i) => {
+    sample(d + 1, "un1", "digester", `D1-${String(i + 1).padStart(2, "0")}`, { ph_dig: r2(vary(7.8, 0.01)), fos_tac: r2(vary(0.27, 0.06)),
+      temp_dig: i === 1 ? 37.6 : r1(vary(41, 0.01)), ts: r1(vary(9.3, 0.02)), vs: r1(vary(78, 0.01)), vfa: Math.round(vary(820, 0.08)), nh4: Math.round(vary(2100, 0.05)) });
+    sample(d + 1, "un1", "biogas", `G1-${String(i + 1).padStart(2, "0")}`, { ch4: r1(vary(53.5, 0.01)), co2: r1(vary(44.5, 0.01)), h2s: Math.round(vary(180, 0.15)), o2: r1(vary(0.3, 0.2)) });
+    sample(d, "un2", "digester", `D2-${String(i + 1).padStart(2, "0")}`, { ph_dig: [7.62, 7.58, 7.52, 7.47, 7.42][i], fos_tac: [0.31, 0.33, 0.36, 0.38, 0.42][i],
+      temp_dig: r1(vary(40.2, 0.01)), ts: r1(vary(8.3, 0.02)), vs: r1(vary(76, 0.01)), vfa: [1100, 1300, 1600, 1900, 2300][i], nh4: Math.round(vary(2450, 0.04)) });
+    sample(d, "un2", "biogas", `G2-${String(i + 1).padStart(2, "0")}`, { ch4: [53.5, 53.1, 52.8, 52.2, 51.0][i], co2: [44.1, 44.6, 45.0, 45.6, 46.8][i],
+      h2s: [220, 250, 265, 300, 340][i], o2: r1(vary(0.4, 0.2)) });
+  });
+  sample(2, "un1", "digester", "D1-06", { ph_dig: 7.82, fos_tac: 0.27, temp_dig: 41.2, ts: 9.4, vs: 78.4, vfa: 790, nh4: 2150 });
+  sample(2, "un1", "biogas", "G1-06", { ch4: 53.7, co2: 44.3, h2s: 165, o2: 0.3 });
+  sample(3, "un2", "digester", "D2-06", { ph_dig: 7.35, fos_tac: 0.55, temp_dig: 40.1, ts: 8.1, vs: 75.2, vfa: 3100, nh4: 2600 });
+  sample(3, "un2", "biogas", "G2-06", { ch4: 48.0, co2: 49.0, h2s: 450, o2: 0.5 });
+  sample(10, "un1", "digestate", "DG1-01", { dig_n: 4.6, dig_p2o5: 1.9, dig_k2o: 5.2 });
+  sample(12, "un2", "digestate", "DG2-01", { dig_n: 5.1, dig_p2o5: 2.2, dig_k2o: 5.6 });
+
+  // digestate movements this calendar year (dates spread over the elapsed part of the year)
+  const jan1 = new Date(NOW.getFullYear(), 0, 1), elapsed = Math.max(Math.floor((NOW - jan1) / 864e5), 12);
+  const yearDay = frac => { const d = new Date(jan1); d.setDate(d.getDate() + Math.floor(frac * (elapsed - 8))); return d; };
+  const dig = (date, unit, mass, dest, recipient, area, n, p, k) => {
+    const s = date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+    const at = new Date(date); at.setHours(11, 0, 0, 0);
+    ev(at, () => insertRows("digestate", [{ id: uid(), tenant_id: T, unit_id: unit, log_date: s, mass_t: mass, destination: dest, recipient,
+      field_area_ha: area, n_kg_t: n, p2o5_kg_t: p, k2o_kg_t: k, notes: null, created_by: OP, created_at: iso(at) }], at));
+  };
+  const P1 = "Παπαδόπουλος Γ. — Αγροτεμάχιο 12", NIK = "Αγρόκτημα Νικολάου", SYN = "Συνεταιρισμός Λάρισας — Τεμ. 4";
+  dig(yearDay(0.15), "un1", 120, "field", P1, 10, 4.6, 1.9, 5.2);
+  dig(yearDay(0.22), "un2", 300, "field", NIK, 25, 5.1, 2.2, 5.6);
+  dig(yearDay(0.30), "un1", 110, "field", P1, 10, 4.6, 1.9, 5.2);
+  dig(yearDay(0.33), "un2", 280, "field", SYN, 18, 5.1, 2.2, 5.6);
+  dig(yearDay(0.45), "un1", 70, "field", P1, 10, 4.6, 1.9, 5.2);
+  dig(yearDay(0.72), "un2", 250, "field", NIK, 25, 5.1, 2.2, 5.6);
+  dig(yearDay(0.84), "un1", 55, "field", P1, 10, 4.6, 1.9, 5.2);
+  dig(dayAt(20), "un2", 150, "sale", "Λιπασματοποιία Θεσσαλίας", null, 5.1, 2.2, 5.6);
+  dig(dayAt(15), "un1", 400, "storage", null, null, 4.6, 1.9, 5.2);
+  dig(dayAt(9), "un2", 600, "storage", null, null, 5.1, 2.2, 5.6);
+  dig(dayAt(6), "un2", 330, "field", SYN, 18, 5.1, 2.2, 5.6);      // pushes this field over 170 kg N/ha
+
+  events.sort((a, b) => a.at - b.at).forEach(e => e.run());
+  // the e-mail cron has already processed alarms older than ~10 minutes; one alarm was acknowledged by the shift operator
+  DB.alerts.forEach(a => { if (!a.resolved_at && !a.acknowledged_at && (NOW - new Date(a.updated_at)) > 10 * 60000) a.emailed_at = iso(new Date(new Date(a.updated_at).getTime() + 4 * 60000)); });
+  const co2 = DB.alerts.find(a => a.metric === "Διοξείδιο (CO₂)" && !a.resolved_at);
+  if (co2) { co2.acknowledged_at = iso(dayAt(2, 16)); co2.acknowledged_by = OP; }
+  currentUser = ME;
+
+  // ------------------------------------------------------- query builder --
+  const rel = {
+    samples: r => ({ ...r, unit: U(r.unit_id) || null }),
+    production: r => ({ ...r, unit: U(r.unit_id) || null }),
+    alerts: r => ({ ...r, unit: U(r.unit_id) || null }),
+    analyses: r => ({ ...r, parameter: DB.parameters.find(p => p.id === r.parameter_id) || null,
+      sample: (() => { const s = DB.samples.find(x => x.id === r.sample_id); return s ? { ...s, unit: U(s.unit_id) || null } : null; })() }),
+    audit_log: r => ({ ...r, actor: DB.profiles.find(p => p.id === r.user_id) || null }),
+  };
+  const VIEWS = { feeding_daily: feedingDaily };
+  function run(st) {
+    const t = st.table, at = iso(new Date());
+    if (VIEWS[t] && st.op !== "select") return { data: null, error: { message: `cannot modify view ${t}` } };
+    let rows = VIEWS[t] ? VIEWS[t]() : (DB[t] || (DB[t] = []));
+    if (st.op === "insert") {
+      const arr = Array.isArray(st.payload) ? st.payload : [st.payload];
+      const ins = arr.map(o => ({ id: uid(), created_at: at, ...o }));
+      DB[t] = rows.concat(ins); afterWrite(t, [], ins, at);
+      return { data: st.single ? ins[0] : ins, error: null };
+    }
+    if (st.op === "update") {
+      const hit = rows.filter(r => st.filters.every(f => f(r)));
+      const olds = hit.map(r => ({ ...r }));
+      hit.forEach(r => Object.assign(r, st.payload)); afterWrite(t, olds, hit, at);
+      return { data: null, error: null };
+    }
+    if (st.op === "delete") {
+      const gone = rows.filter(r => st.filters.every(f => f(r)));
+      if (t === "feedstocks" && gone.some(f => DB.feeding.some(x => x.feedstock_id === f.id)))
+        return { data: null, error: { code: "23503", message: "update or delete on table \"feedstocks\" violates foreign key constraint" } };
+      DB[t] = rows.filter(r => !st.filters.every(f => f(r))); afterWrite(t, gone, [], at);
+      return { data: null, error: null };
+    }
+    let out = rows.filter(r => st.filters.every(f => f(r)));
+    const count = out.length;
+    if (st.orders.length) out = out.slice().sort((a, b) => { for (const o of st.orders) { const x = a[o.c], y = b[o.c];
+      if (x == null && y == null) continue; if (x == null) return o.asc ? -1 : 1; if (y == null) return o.asc ? 1 : -1;
+      if (x < y) return o.asc ? -1 : 1; if (x > y) return o.asc ? 1 : -1; } return 0; });
+    if (st.limit != null) out = out.slice(0, st.limit);
+    out = out.map(r => rel[t] ? rel[t](r) : { ...r });
+    if (st.head && st.count) return { count, data: null, error: null };
+    if (st.single || st.maybeSingle) return { data: out[0] || null, error: null, count };
+    return { data: out, error: null, count };
+  }
+  function query(table) {
+    const st = { table, filters: [], orders: [], limit: null, single: false, maybeSingle: false, count: false, head: false, op: "select", payload: null };
+    const add = f => { st.filters.push(f); return api; };
+    const api = {
+      select: (c, o) => { if (o && o.count) st.count = true; if (o && o.head) st.head = true; return api; },
+      insert: r => { st.op = "insert"; st.payload = r; return api; },
+      update: o => { st.op = "update"; st.payload = o; return api; },
+      delete: () => { st.op = "delete"; return api; },
+      eq:  (c, v) => add(r => String(r[c]) === String(v)),
+      neq: (c, v) => add(r => String(r[c]) !== String(v)),
+      is:  (c, v) => add(r => v === null ? r[c] == null : r[c] === v),
+      not: (c, op, v) => add(r => op === "is" && v === null ? r[c] != null : String(r[c]) !== String(v)),
+      gte: (c, v) => add(r => r[c] != null && r[c] >= v),
+      lte: (c, v) => add(r => r[c] != null && r[c] <= v),
+      lt:  (c, v) => add(r => r[c] != null && r[c] < v),
+      in:  (c, vs) => add(r => vs.map(String).includes(String(r[c]))),
+      or:  s => add(r => s.split(",").some(p => { const [c, op, ...rest] = p.split("."); const v = rest.join(".");
+        if (op === "is" && v === "null") return r[c] == null; if (op === "eq") return String(r[c]) === v; return false; })),
+      order: (c, o) => { st.orders.push({ c, asc: !(o && o.ascending === false) }); return api; },
+      limit: n => { st.limit = n; return api; },
+      single: () => { st.single = true; return api; },
+      maybeSingle: () => { st.maybeSingle = true; return api; },
+      then: (res, rej) => Promise.resolve().then(() => run(st)).then(res, rej),
+    };
     return api;
   }
-  const demoUser={id:'demo-user',email:'demo@biogas.gr'};
-  const client={ from:query,
-    auth:{ getSession:async()=>({data:{session:{user:demoUser}}}), onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
-      signInWithPassword:async()=>({data:{user:demoUser},error:null}), signUp:async()=>({data:{user:demoUser,session:{user:demoUser}},error:null}),
-      signOut:async()=>({error:null}), resetPasswordForEmail:async()=>({data:{},error:null}),
-      signInWithOtp:async()=>({data:{},error:null}), verifyOtp:async()=>({data:{user:demoUser},error:null}),
-      mfa:{ getAuthenticatorAssuranceLevel:async()=>({data:{currentLevel:'aal1',nextLevel:'aal1'}}), listFactors:async()=>({data:{totp:[]}}),
-        enroll:async()=>({data:{id:'f1',totp:{qr_code:'<svg xmlns="http://www.w3.org/2000/svg" width="170" height="170"><rect width="170" height="170" fill="#e4efe3"/><text x="85" y="90" text-anchor="middle" font-size="14" fill="#2d6a49">DEMO QR</text></svg>',secret:'DEMO-SECRET'}},error:null}),
-        challenge:async()=>({data:{id:'c1'},error:null}), verify:async()=>({error:null}), unenroll:async()=>({error:null}) } },
-    storage:{ from:()=>({ upload:async()=>({error:null}), createSignedUrl:async()=>({data:{signedUrl:'about:blank'},error:null}), remove:async()=>({error:null}) }) }
+  function rpc(fn, args) {
+    return Promise.resolve().then(() => {
+      const at = iso(new Date());
+      if (fn === "acknowledge_alert") {
+        const a = DB.alerts.find(x => x.id === args.p_id);
+        if (!a) return { data: null, error: { message: "alert not found" } };
+        a.acknowledged_at = at; a.acknowledged_by = ME; a.updated_at = at;
+        return { data: null, error: null };
+      }
+      if (fn === "replace_feeding") {
+        if (!U(args.p_unit)) return { data: null, error: { message: "unknown plant" } };
+        const gone = DB.feeding.filter(f => f.tenant_id === args.p_tenant && f.unit_id === args.p_unit && f.feed_date === args.p_date);
+        DB.feeding = DB.feeding.filter(f => !gone.includes(f));
+        const rows = (args.p_items || []).filter(i => Number(i.mass_t) > 0).map(i => ({ id: uid(), tenant_id: args.p_tenant, unit_id: args.p_unit,
+          feed_date: args.p_date, feedstock_id: i.feedstock_id, mass_t: Number(i.mass_t), created_by: ME, created_at: at }));
+        DB.feeding.push(...rows);
+        currentUser = ME; afterWrite("feeding", gone, rows, at);
+        return { data: rows.length, error: null };
+      }
+      return { data: null, error: { message: "unknown rpc " + fn } };
+    });
+  }
+  const demoUser = { id: ME, email: "demo@biogas.gr" };
+  const client = {
+    from: query, rpc,
+    auth: {
+      getSession: async () => ({ data: { session: { user: demoUser } } }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+      signInWithPassword: async () => ({ data: { user: demoUser }, error: null }),
+      signUp: async () => ({ data: { user: demoUser, session: { user: demoUser } }, error: null }),
+      signOut: async () => ({ error: null }),
+      resetPasswordForEmail: async () => ({ data: {}, error: null }),
+      signInWithOtp: async () => ({ data: {}, error: null }),
+      verifyOtp: async () => ({ data: { user: demoUser }, error: null }),
+      mfa: {
+        getAuthenticatorAssuranceLevel: async () => ({ data: { currentLevel: "aal1", nextLevel: "aal1" } }),
+        listFactors: async () => ({ data: { totp: [] } }),
+        enroll: async () => ({ data: { id: "f1", totp: { qr_code: '<svg xmlns="http://www.w3.org/2000/svg" width="170" height="170"><rect width="170" height="170" fill="#e4efe3"/><text x="85" y="90" text-anchor="middle" font-size="14" fill="#2d6a49">DEMO QR</text></svg>', secret: "DEMO-SECRET" } }, error: null }),
+        challenge: async () => ({ data: { id: "c1" }, error: null }),
+        verify: async () => ({ error: null }),
+        unenroll: async () => ({ error: null }),
+      },
+    },
+    storage: { from: () => ({ upload: async () => ({ error: null }),
+      createSignedUrl: async () => ({ data: { signedUrl: "about:blank" }, error: null }), remove: async () => ({ error: null }) }) },
   };
-  window.supabase={ createClient:()=>client };
+  window.supabase = { createClient: () => client };
+  window.__BIOGAS_DEMO_DB__ = DB;   // for debugging in the console
 })();
-</script>
 
+</script>
 <script>
 /* ============================================================================
    LabPortal — single-file client (vanilla JS + Supabase)
@@ -377,6 +711,7 @@ const STATUS = {draft:"Πρόχειρο",received:"Παραλήφθηκε",analy
 /* classify a value against a parameter's ideal range */
 function rangeOf(val, p){
   if(val==null||p==null) return "na";
+  if(p.ideal_min==null && p.ideal_max==null) return "na";   // informational parameter, no band
   if(p.ideal_min!=null && val<p.ideal_min) return "low";
   if(p.ideal_max!=null && val>p.ideal_max) return "high";
   return "ok";
@@ -430,7 +765,7 @@ async function onLoggedIn(user){
   applyBranding();
   renderTenantArea();
   show("app");
-  updateLastSeen(); if(!state._hb) state._hb=setInterval(updateLastSeen, 60000);  // presence heartbeat
+  updateLastSeen(); if(!state._hb) state._hb=setInterval(()=>{ updateLastSeen(); refreshAlertBadge(); }, 60000);  // presence + alarms
   await loadRefData();
   go("dashboard");
 }
@@ -454,7 +789,7 @@ function renderTenantArea(){
       return;
     }
     const sel = el("select",{class:"input",style:"padding:6px 10px;max-width:260px",onchange:async e=>{
-      state.tenantId=e.target.value; await loadRefData(); go(state.view);
+      state.tenantId=e.target.value; state.planner=null; state.feedLog=null; state.digLog=null; await loadRefData(); go(state.view);
     }});
     state.tenants.forEach(t=>sel.append(el("option",{value:t.id, ...(t.id===state.tenantId?{selected:"selected"}:{})},t.name)));
     area.append(el("div",{style:"display:flex;align-items:center;gap:8px"},
@@ -468,7 +803,7 @@ function renderTenantArea(){
 
 /* load parameters + units for the active tenant */
 async function loadRefData(){
-  state.params=[]; state.units=[];
+  state.params=[]; state.units=[]; state.feedstocks=[]; state.feedstocksAll=[]; state.feedstockById={};
   if(!state.tenantId){ return; }
   const { data:params } = await sb.from("parameters")
     .select("*").or(`tenant_id.is.null,tenant_id.eq.${state.tenantId}`).order("sort_order");
@@ -477,6 +812,13 @@ async function loadRefData(){
   state.params = Object.values(byCode).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
   const { data:units } = await sb.from("units").select("*").eq("tenant_id",state.tenantId).order("name");
   state.units = units||[];
+  // feedstock registry: a tenant row overrides the global one with the same name
+  const { data:fs } = await sb.from("feedstocks").select("*").or(`tenant_id.is.null,tenant_id.eq.${state.tenantId}`).order("name");
+  state.feedstockById = {}; (fs||[]).forEach(f=>{ state.feedstockById[f.id]=f; });
+  const byName={}; (fs||[]).forEach(f=>{ if(!byName[f.name]||f.tenant_id) byName[f.name]=f; });
+  state.feedstocksAll = Object.values(byName).sort((a,b)=>a.name.localeCompare(b.name,"el"));
+  state.feedstocks = state.feedstocksAll.filter(f=>f.active!==false);
+  refreshAlertBadge();
 }
 
 /* ============================ navigation ============================ */
@@ -490,6 +832,10 @@ function go(view){
   else if(view==="samples") renderSamples();
   else if(view==="bulk") renderBulk();
   else if(view==="production") renderProduction();
+  else if(view==="feeding") renderFeeding();
+  else if(view==="digestate") renderDigestate();
+  else if(view==="alerts") renderAlerts();
+  else if(view==="feedstocks") renderFeedstocks();
   else if(view==="reports") renderReports();
   else if(view==="units") renderUnits();
   else if(view==="params") renderParams();
@@ -516,25 +862,34 @@ async function renderDashboard(){
       <div class="sub">Σύνοψη δραστηριότητας & τιμές εκτός ιδανικού εύρους</div>
     </div></div>
     <div class="stats" id="dash-stats"></div>
+    <div id="dash-alerts"></div>
     <div class="panel"><h3>Τιμές εκτός ιδανικού (πρόσφατες)</h3><div class="body" id="dash-out"></div></div>
     <div style="height:16px"></div>
     <div class="panel"><h3>Πρόσφατα δείγματα</h3><div class="body" id="dash-recent"></div></div>`;
 
   const T = state.tenantId;
-  const [sTotal, sMonth, uCount, recent, analyses] = await Promise.all([
+  const [sTotal, sMonth, uCount, recent, analyses, openAlerts] = await Promise.all([
     sb.from("samples").select("id",{count:"exact",head:true}).eq("tenant_id",T),
     sb.from("samples").select("id",{count:"exact",head:true}).eq("tenant_id",T).gte("created_at",monthStart()),
     sb.from("units").select("id",{count:"exact",head:true}).eq("tenant_id",T),
     sb.from("samples").select("id,code,kind,status,taken_at,created_at,unit:units(name)").eq("tenant_id",T).order("created_at",{ascending:false}).limit(8),
     sb.from("analyses").select("value,unit,created_at,parameter:parameters(code,label_el,ideal_min,ideal_max),sample:samples(code,unit:units(name))").eq("tenant_id",T).order("created_at",{ascending:false}).limit(400),
+    sb.from("alerts").select("*,unit:units(name)").eq("tenant_id",T).is("resolved_at",null).order("updated_at",{ascending:false}).limit(50),
   ]);
+  const act=(openAlerts.data||[]).slice().sort((a,b)=>(b.severity==="critical")-(a.severity==="critical")||String(b.updated_at).localeCompare(String(a.updated_at)));
+  const actCrit=act.filter(a=>a.severity==="critical").length;
 
   const out = (analyses.data||[]).map(a=>({a,st:rangeOf(a.value,a.parameter)})).filter(x=>x.st==="low"||x.st==="high");
   $("#dash-stats").innerHTML = `
     ${statTile("Σύνολο δειγμάτων", sTotal.count??0)}
     ${statTile("Δείγματα τον μήνα", sMonth.count??0)}
     ${statTile("Μονάδες", uCount.count??0)}
-    ${statTile("Εκτός ιδανικού", out.length, out.length?'var(--high)':'var(--ink)')}`;
+    ${statTile("Εκτός ιδανικού", out.length, out.length?'var(--high)':'var(--ink)')}
+    ${statTile("Ενεργές ειδοποιήσεις", act.length, actCrit?'var(--high)':(act.length?'var(--warn)':'var(--ok)'))}`;
+  $("#dash-alerts").innerHTML = act.length ? `<div class="panel" style="margin-bottom:16px"><h3 style="display:flex;justify-content:space-between;align-items:center">
+      <span>🔔 Ενεργές ειδοποιήσεις</span><button class="btn ghost sm" onclick="go('alerts')">Όλες →</button></h3>
+      <div class="body">${table(["Σοβαρότητα","Μονάδα","Μήνυμα","Κατάσταση"],
+        act.slice(0,5).map(a=>[sevBadge(a.severity),esc(a.unit?.name||"—"),`<div class="cell-wrap">${esc(a.message||a.metric||"")}</div>`,alertStateBadge(a)]))}</div></div>` : "";
 
   $("#dash-out").innerHTML = out.length ? table(
     ["Μονάδα","Δείγμα","Παράμετρος","Τιμή","Κατάσταση"],
@@ -677,7 +1032,7 @@ function renderAnalyses(an){
     if(!confirm("Διαγραφή ανάλυσης;"))return;
     const {error}=await sb.from("analyses").delete().eq("id",b.dataset.del);
     if(error)return toast("Σφάλμα: "+error.message);
-    toast("Διαγράφηκε"); openSample(state.sample.id);
+    toast("Διαγράφηκε"); refreshAlertBadge(); openSample(state.sample.id);
   });
 }
 
@@ -738,7 +1093,7 @@ async function saveBulk(){
   const { error:e2 } = await sb.from("analyses").insert(payload);
   btn.disabled=false; btn.textContent="Αποθήκευση καταχώρησης";
   if(e2) return toast("Το δείγμα αποθηκεύτηκε, αλλά οι μετρήσεις απέτυχαν: "+e2.message);
-  toast(`Αποθηκεύτηκαν ${rows.length} μετρήσεις`); openSample(s.id);
+  toast(`Αποθηκεύτηκαν ${rows.length} μετρήσεις`); refreshAlertBadge(); openSample(s.id);
 }
 
 /* ============================ modals: forms ============================ */
@@ -802,7 +1157,7 @@ function analysisForm(sample){
       measured_at:new Date().toISOString(), created_by:state.profile.id
     });
     if(error) return toast("Σφάλμα: "+error.message);
-    close(); toast("Προστέθηκε"); openSample(sample.id);
+    close(); toast("Προστέθηκε"); refreshAlertBadge(); openSample(sample.id);
   });
 }
 
@@ -906,7 +1261,7 @@ function exportMonthlyXlsx(){
 /* ---- Full tenant backup (JSON) ---- */
 async function exportBackup(){
   toast("Δημιουργία backup…");
-  const tables=["units","parameters","samples","analyses","production","invoices","files","invitations","profiles"];
+  const tables=["units","parameters","samples","analyses","production","feedstocks","recipes","feeding","digestate","alerts","alert_recipients","invoices","files","invitations","profiles"];
   const out={ app:"BioGas Portal", exported_at:new Date().toISOString(), tenant_id:state.tenantId };
   for(const t of tables){ const { data } = await sb.from(t).select("*").eq("tenant_id",state.tenantId); out[t]=data||[]; }
   const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
@@ -1411,7 +1766,7 @@ async function loadProduction(){
     const d=$(`#pr-body [data-del="${r.id}"]`); if(d) d.onclick=async()=>{
       if(!confirm("Διαγραφή εγγραφής;"))return;
       const{error}=await sb.from("production").delete().eq("id",r.id);
-      if(error)return toast("Σφάλμα: "+error.message); toast("Διαγράφηκε"); loadProduction();
+      if(error)return toast("Σφάλμα: "+error.message); toast("Διαγράφηκε"); refreshAlertBadge(); loadProduction();
     };
   });
 }
@@ -1444,7 +1799,7 @@ function productionForm(r){
       ? await sb.from("production").update(payload).eq("id",r.id)
       : await sb.from("production").insert({...payload,tenant_id:state.tenantId,created_by:state.profile.id});
     if(error)return toast("Σφάλμα: "+error.message);
-    close(); toast(r?"Αποθηκεύτηκε":"Καταχωρήθηκε"); loadProduction();
+    close(); toast(r?"Αποθηκεύτηκε":"Καταχωρήθηκε"); refreshAlertBadge(); loadProduction();
   });
 }
 function exportProductionXlsx(){
@@ -1456,6 +1811,576 @@ function exportProductionXlsx(){
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Παραγωγή");
   XLSX.writeFile(wb,`Παραγωγή_${state._prod.month}.xlsx`); toast("Excel κατέβηκε");
 }
+
+/* ============================ BioGas — shared (Phase 7) ============================ */
+const CH4_KWH = 9.97;   // kWh per m³ CH₄ (lower heating value)
+const ETA_EL  = 0.40;   // indicative CHP electrical efficiency
+const N_LIMIT = 170;    // kg N/ha/yr — Nitrates Directive, vulnerable zones (ΖΕΝ)
+const FEED_CAT  = {manure:"Κοπριά",energy_crop:"Ενεργειακή καλλιέργεια",agro_industrial:"Αγροβιομηχανικό",food_waste:"Απόβλητα τροφίμων",other:"Άλλο"};
+const DIG_DEST  = {field:"Εφαρμογή σε αγρό",storage:"Αποθήκευση σε δεξαμενή",sale:"Πώληση",treatment:"Επεξεργασία",other:"Άλλο"};
+const ALERT_KIND= {parameter:"Παράμετρος",production:"Παραγωγή",feeding:"Τροφοδοσία",digestate:"Χώνευμα"};
+const fsVs  = f => (Number(f&&f.ts_pct)||0)/100 * (Number(f&&f.vs_pct)||0)/100;   // t VS per t fresh
+const fsCh4 = f => fsVs(f) * (Number(f&&f.bmp)||0);                                  // m³ CH₄ per t fresh
+const stColor = st => ({ok:"var(--ok)",warn:"var(--warn)",crit:"var(--high)",low:"var(--low)"})[st]||"var(--ink)";
+function olrState(v){ if(v==null) return "na"; if(v>5) return "crit"; if(v>4) return "warn"; if(v<1.5) return "low"; return "ok"; }
+function hrtState(v){ if(v==null) return "na"; if(v<15) return "crit"; if(v<20) return "warn"; return "ok"; }
+function cnState(v){ if(v==null) return "na"; if(v<12) return "crit"; if(v<15||v>35) return "warn"; return "ok"; }
+function coverState(v){ if(v==null) return "na"; return (v<90||v>110) ? "warn" : "ok"; }
+function effState(v){ if(v==null) return "na"; return (v<85||v>110) ? "warn" : "ok"; }
+function stBadge(st,txt){ const c={ok:"ok",warn:"warnb",crit:"high",low:"low"}[st]||"st"; return `<span class="badge ${c}">${txt}</span>`; }
+function sevBadge(s){ return s==="critical" ? `<span class="badge high">● Κρίσιμο</span>` : `<span class="badge warnb">● Προειδοποίηση</span>`; }
+function alertStateBadge(a){
+  if(a.resolved_at) return `<span class="badge st">Επιλύθηκε</span>`;
+  if(a.acknowledged_at) return `<span class="badge low">Σε γνώση</span>`;
+  return `<span class="badge high">Ενεργή</span>`;
+}
+function unitName(id){ return (state.units.find(u=>u.id===id)||{}).name || "—"; }
+function monthRange(m){ const [y,mo]=m.split("-").map(Number);
+  return {from:new Date(Date.UTC(y,mo-1,1)).toISOString().slice(0,10), to:new Date(Date.UTC(y,mo,1)).toISOString().slice(0,10)}; }
+function fmtDateTime(d){ return d ? new Date(d).toLocaleString("el-GR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—"; }
+async function refreshAlertBadge(){
+  const b=$("#alert-badge"); if(!b||!sb||!state.tenantId) return;
+  try{
+    const { data } = await sb.from("alerts").select("severity").eq("tenant_id",state.tenantId)
+      .is("resolved_at",null).is("acknowledged_at",null).limit(500);
+    const n=(data||[]).length, crit=(data||[]).some(a=>a.severity==="critical");
+    b.textContent = n>99 ? "99+" : (n ? String(n) : "");
+    b.classList.toggle("hidden",!n); b.classList.toggle("crit",crit);
+  }catch(_){}
+}
+
+/* ============================ Feedstock registry ============================ */
+async function renderFeedstocks(){
+  const main=$("#main");
+  main.innerHTML=`<div class="page-head">
+      <div><h1 class="page-title">Υποστρώματα</h1>
+        <div class="sub">Μητρώο πρώτων υλών: ξηρή & οργανική ουσία, μεθανοδυναμικό (BMP), κόστος, C:N</div></div>
+      ${canWrite()?`<button class="btn primary" id="fs-new">＋ Νέο υπόστρωμα</button>`:""}</div>
+    <div class="hint info">Η <b>απόδοση ανά τόνο</b> υπολογίζεται αυτόματα: TS × VS × BMP. Οι προεπιλεγμένες τιμές είναι
+      ενδεικτικές βιβλιογραφίας — πάτησε «Προσαρμογή» για να καταχωρίσεις τις δικές σου από εργαστηριακή ανάλυση.</div>
+    <div class="panel"><div class="body" id="fs-body"><div class="empty">Φόρτωση…</div></div></div>`;
+  if(canWrite()) $("#fs-new").onclick=()=>feedstockForm();
+  await loadRefData();
+  const list=state.feedstocksAll, body=$("#fs-body");
+  body.innerHTML = list.length ? table(
+    ["Υπόστρωμα","Κατηγορία","TS %","VS % TS","BMP m³/t VS","m³ CH₄ / t","Τιμή €/t","C:N","Πηγή",""],
+    list.map(f=>{
+      const g=!f.tenant_id;
+      const act=!canWrite() ? "" : g
+        ? `<button class="btn ghost sm" data-copy="${f.id}">Προσαρμογή</button>`
+        : `<span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn ghost sm" data-edit="${f.id}">✎</button><button class="btn ghost sm danger" data-del="${f.id}">✕</button></span>`;
+      return [`${esc(f.name)}${f.active===false?` <span class="badge st">ανενεργό</span>`:""}`,
+        esc(FEED_CAT[f.category]||f.category), fmtNum(f.ts_pct), fmtNum(f.vs_pct), fmtNum(f.bmp), `<b>${Math.round(fsCh4(f))}</b>`,
+        f.price_eur_t==null ? "—" : (f.price_eur_t<0 ? `<span style="color:var(--ok)" title="έσοδο (gate fee)">${fmtNum(f.price_eur_t)}</span>` : fmtNum(f.price_eur_t)),
+        fmtNum(f.cn_ratio), g?`<span class="badge st">προεπιλογή</span>`:`<span class="badge ok">δικό σου</span>`, act];
+    })) : `<div class="empty">Κανένα υπόστρωμα. Τρέξε το db/seed.sql.</div>`;
+  list.forEach(f=>{
+    const e=$(`#fs-body [data-edit="${f.id}"]`); if(e) e.onclick=()=>feedstockForm(f);
+    const c=$(`#fs-body [data-copy="${f.id}"]`); if(c) c.onclick=()=>feedstockForm({...f,id:null});
+    const d=$(`#fs-body [data-del="${f.id}"]`); if(d) d.onclick=async()=>{
+      if(!confirm(`Διαγραφή «${f.name}»;`)) return;
+      const { error } = await sb.from("feedstocks").delete().eq("id",f.id);
+      if(error) return toast(/foreign|23503|violat/i.test(String(error.message)+String(error.code))
+        ? "Χρησιμοποιείται σε τροφοδοσία — απενεργοποίησέ το αντί για διαγραφή." : "Σφάλμα: "+error.message);
+      toast("Διαγράφηκε"); renderFeedstocks();
+    };
+  });
+}
+function feedstockForm(f){
+  const isEdit=!!(f&&f.id), body=el("div"), v=k=>(f&&f[k]!=null)?f[k]:"";
+  body.innerHTML=`
+    <div class="field"><label>Όνομα</label><input class="input" id="fs-name" value="${esc(v("name"))}"></div>
+    <div class="row">
+      <div class="field"><label>Κατηγορία</label><select class="input" id="fs-cat">${Object.entries(FEED_CAT).map(([k,l])=>`<option value="${k}"${(f&&f.category||"other")===k?" selected":""}>${l}</option>`).join("")}</select></div>
+      <div class="field"><label>Τιμή (€/t)</label><input class="input" id="fs-price" type="number" step="any" value="${v("price_eur_t")}" placeholder="αρνητική = έσοδο"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>TS (% νωπού)</label><input class="input fs-calc" id="fs-ts" type="number" step="any" value="${v("ts_pct")}"></div>
+      <div class="field"><label>VS (% του TS)</label><input class="input fs-calc" id="fs-vs" type="number" step="any" value="${v("vs_pct")}"></div>
+      <div class="field"><label>BMP (m³ CH₄/t VS)</label><input class="input fs-calc" id="fs-bmp" type="number" step="any" value="${v("bmp")}"></div>
+      <div class="field"><label>C:N</label><input class="input" id="fs-cn" type="number" step="any" value="${v("cn_ratio")}"></div>
+    </div>
+    <div class="hint ok" id="fs-yield"></div>
+    <div class="field"><label>Σημειώσεις</label><textarea class="input" id="fs-notes" rows="2">${esc(v("notes"))}</textarea></div>
+    <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fs-active" ${f&&f.active===false?"":"checked"}> Ενεργό (εμφανίζεται στον σχεδιασμό σιτηρεσίου)</label>`;
+  const upd=()=>{ const t={ts_pct:body.querySelector("#fs-ts").value,vs_pct:body.querySelector("#fs-vs").value,bmp:body.querySelector("#fs-bmp").value};
+    body.querySelector("#fs-yield").innerHTML=`Απόδοση ≈ <b>${Math.round(fsCh4(t))} m³ CH₄ / t</b> νωπού · ${(fsVs(t)*1000).toFixed(0)} kg VS / t`; };
+  body.querySelectorAll(".fs-calc").forEach(i=>i.oninput=upd); upd();
+  modal(isEdit?"Επεξεργασία υποστρώματος":(f?"Προσαρμογή υποστρώματος":"Νέο υπόστρωμα"), body, async close=>{
+    const num=id=>{ const x=$(id).value; return x!==""?Number(x):null; };
+    const payload={name:$("#fs-name").value.trim(), category:$("#fs-cat").value, ts_pct:num("#fs-ts"), vs_pct:num("#fs-vs"),
+      bmp:num("#fs-bmp"), price_eur_t:num("#fs-price"), cn_ratio:num("#fs-cn"), notes:$("#fs-notes").value.trim()||null,
+      active:$("#fs-active").checked};
+    if(!payload.name) return toast("Δώσε όνομα.");
+    const { error } = isEdit ? await sb.from("feedstocks").update(payload).eq("id",f.id)
+                             : await sb.from("feedstocks").insert({...payload,tenant_id:state.tenantId});
+    if(error) return toast(/duplicate|unique/i.test(error.message)?"Υπάρχει ήδη υπόστρωμα με αυτό το όνομα.":"Σφάλμα: "+error.message);
+    close(); toast("Αποθηκεύτηκε"); refreshAlertBadge(); renderFeedstocks();
+  });
+}
+
+/* ============================ Feeding: diet planner + log ============================ */
+async function renderFeeding(){
+  const main=$("#main"), today=new Date().toISOString().slice(0,10);
+  const P=state.planner||(state.planner={unit_id:"",date:today,lines:[],recipe_id:"",prev:null});
+  if(!state.units.some(u=>u.id===P.unit_id)) P.unit_id=(state.units[0]||{}).id||"";
+  const FL=state.feedLog||(state.feedLog={month:today.slice(0,7),unit:""});
+  if(!state.units.length){
+    main.innerHTML=`<div class="page-head"><div><h1 class="page-title">Τροφοδοσία</h1></div></div>
+      <div class="hint warn">Πρόσθεσε πρώτα μια <b>Μονάδα / χωνευτή</b> με όγκο (m³) και ισχύ ΣΗΘ — χρειάζονται για τον υπολογισμό OLR/HRT.</div>`;
+    return;
+  }
+  main.innerHTML=`<div class="page-head">
+      <div><h1 class="page-title">Τροφοδοσία</h1>
+        <div class="sub">Σιτηρέσιο χωνευτή με αυτόματο υπολογισμό OLR / HRT, αναμενόμενης παραγωγής & κόστους</div></div></div>
+    <div class="panel" style="margin-bottom:16px"><h3>Σχεδιασμός σιτηρεσίου</h3><div class="body" style="padding:16px 18px">
+      <div class="row">
+        <div class="field"><label>Μονάδα / χωνευτής</label><select class="input" id="pl-unit"></select></div>
+        <div class="field"><label>Ημερομηνία</label><input class="input" id="pl-date" type="date"></div>
+        <div class="field"><label>Συνταγή</label><div style="display:flex;gap:6px">
+          <select class="input" id="pl-recipe"></select>
+          ${canWrite()?`<button class="btn ghost sm danger hidden" id="pl-recipe-del" title="Διαγραφή συνταγής">🗑</button>`:""}</div></div>
+      </div>
+      <div id="pl-unitinfo" class="small muted" style="margin:-4px 0 4px"></div>
+      <div id="pl-basis" class="small muted" style="margin:0 0 10px"></div>
+      <div id="pl-lines"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center">
+        <button class="btn sm" id="pl-add">＋ Υπόστρωμα</button>
+        <div class="spacer"></div>
+        ${canWrite()?`<button class="btn sm" id="pl-save-recipe">💾 Αποθήκευση συνταγής</button>
+        <button class="btn primary" id="pl-commit">✔ Καταχώρηση τροφοδοσίας</button>`:""}
+      </div>
+    </div></div>
+    <div class="stats" id="pl-stats"></div>
+    <div id="pl-warn"></div>
+    <div class="panel"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <span>Ημερολόγιο τροφοδοσίας</span>
+        <span style="display:flex;gap:8px"><input class="input" id="fl-month" type="month" style="padding:6px 10px">
+          <select class="input" id="fl-unit" style="padding:6px 10px"><option value="">Όλες οι μονάδες</option></select></span>
+      </h3><div class="body" id="fl-body"><div class="empty">Φόρτωση…</div></div></div>`;
+  const pu=$("#pl-unit"); state.units.forEach(u=>pu.append(el("option",{value:u.id},u.name))); pu.value=P.unit_id;
+  $("#pl-date").value=P.date;
+  const fu=$("#fl-unit"); state.units.forEach(u=>fu.append(el("option",{value:u.id},u.name))); fu.value=FL.unit;
+  $("#fl-month").value=FL.month;
+  pu.onchange=()=>{ P.unit_id=pu.value; loadPrev(); };
+  $("#pl-date").onchange=e=>{ P.date=e.target.value; loadPrev(); };
+  $("#pl-add").onclick=()=>{ P.lines.push({feedstock_id:(state.feedstocks[0]||{}).id||"", mass_t:""}); drawLines();
+    const ins=$$("#pl-lines .pl-mass"); if(ins.length) ins[ins.length-1].focus(); };
+  $("#fl-month").onchange=e=>{ FL.month=e.target.value||today.slice(0,7); loadFeedingLog(); };
+  fu.onchange=()=>{ FL.unit=fu.value; loadFeedingLog(); };
+  if(canWrite()){ $("#pl-save-recipe").onclick=saveRecipeForm; $("#pl-commit").onclick=commitFeeding; }
+  await loadRecipes(); renderRecipeSelect();
+  if(!P.lines.length && P.unit_id) await loadLatestFeedingAsBasis();
+  drawLines(); loadPrev(); loadFeedingLog();
+}
+// Start the planner from the plant's most recent feeding (the usual case: small daily adjustments).
+async function loadLatestFeedingAsBasis(){
+  const P=state.planner;
+  const { data:last } = await sb.from("feeding_daily").select("feed_date").eq("tenant_id",state.tenantId)
+    .eq("unit_id",P.unit_id).lte("feed_date",P.date).order("feed_date",{ascending:false}).limit(1);
+  if(!last || !last[0]) return;
+  const { data } = await sb.from("feeding").select("feedstock_id,mass_t").eq("tenant_id",state.tenantId)
+    .eq("unit_id",P.unit_id).eq("feed_date",last[0].feed_date);
+  P.lines=(data||[]).map(r=>({feedstock_id:r.feedstock_id, mass_t:r.mass_t}));
+  const info=$("#pl-basis"); if(info) info.textContent=`Βάση: τροφοδοσία ${fmtDate(last[0].feed_date)} — προσάρμοσε και καταχώρισε για την επιλεγμένη ημέρα.`;
+}
+function drawLines(){
+  const P=state.planner, box=$("#pl-lines"); if(!box) return;
+  P.lines.forEach(l=>{ if(!l.feedstock_id && state.feedstocks[0]) l.feedstock_id=state.feedstocks[0].id; });
+  if(!P.lines.length){ box.innerHTML=`<div class="empty" style="padding:18px">Πρόσθεσε υποστρώματα ή φόρτωσε μια συνταγή.</div>`; updatePlannerCalc(); return; }
+  const opts=sel=>{
+    let o=state.feedstocks.map(f=>`<option value="${f.id}"${f.id===sel?" selected":""}>${esc(f.name)}</option>`).join("");
+    if(sel && !state.feedstocks.some(f=>f.id===sel)){ const f=state.feedstockById[sel]; o=`<option value="${sel}" selected>${esc(f?f.name:"(άγνωστο)")} — ανενεργό</option>`+o; }
+    return o;
+  };
+  box.innerHTML=`<table class="grid-entry"><thead><tr><th>Υπόστρωμα</th><th style="width:130px">t / ημέρα</th><th>VS (t)</th><th>CH₄ (m³)</th><th>Κόστος (€)</th><th></th></tr></thead><tbody>${
+    P.lines.map((l,i)=>`<tr>
+      <td><select class="input pl-fs" data-i="${i}">${opts(l.feedstock_id)}</select></td>
+      <td><input class="input pl-mass" data-i="${i}" type="number" step="any" min="0" value="${l.mass_t??""}"></td>
+      <td class="pl-c-vs"></td><td class="pl-c-ch4"></td><td class="pl-c-cost"></td>
+      <td><button class="btn ghost sm danger pl-del" data-i="${i}" title="Αφαίρεση">✕</button></td></tr>`).join("")}</tbody></table>`;
+  box.querySelectorAll(".pl-fs").forEach(s=>s.onchange=()=>{ P.lines[+s.dataset.i].feedstock_id=s.value; updatePlannerCalc(); });
+  box.querySelectorAll(".pl-mass").forEach(s=>s.oninput=()=>{ P.lines[+s.dataset.i].mass_t=s.value; updatePlannerCalc(); });
+  box.querySelectorAll(".pl-del").forEach(b=>b.onclick=()=>{ P.lines.splice(+b.dataset.i,1); drawLines(); });
+  updatePlannerCalc();
+}
+function plannerCalc(){
+  const P=state.planner, u=state.units.find(x=>x.id===P.unit_id)||{};
+  let mass=0, vs=0, ch4=0, cost=0, cnW=0, cnV=0;
+  const per=P.lines.map(l=>{
+    const f=state.feedstockById[l.feedstock_id]||{}, m=Math.max(Number(l.mass_t)||0,0);
+    const v=m*fsVs(f), c=m*fsCh4(f), co=m*(Number(f.price_eur_t)||0);
+    mass+=m; vs+=v; ch4+=c; cost+=co;
+    if(f.cn_ratio!=null && v>0){ cnW+=v*Number(f.cn_ratio); cnV+=v; }
+    return {v,c,co};
+  });
+  const vol=Number(u.digester_m3)||0, cap=Number(u.capacity_kw)||0;
+  const olr=vol>0 ? vs*1000/vol : null, hrt=(vol>0&&mass>0) ? vol/mass : null;
+  const kwh=ch4*CH4_KWH*ETA_EL, cover=(cap>0&&mass>0) ? kwh/(cap*24)*100 : null, cn=cnV>0 ? cnW/cnV : null;
+  return {per,mass,vs,ch4,cost,olr,hrt,kwh,cover,cn,unit:u};
+}
+function updatePlannerCalc(){
+  const k=plannerCalc(), P=state.planner, u=k.unit;
+  $$("#pl-lines tbody tr").forEach((tr,i)=>{ const p=k.per[i]; if(!p) return;
+    tr.querySelector(".pl-c-vs").textContent=p.v.toFixed(2);
+    tr.querySelector(".pl-c-ch4").textContent=fmtNum(Math.round(p.c));
+    tr.querySelector(".pl-c-cost").textContent=fmtNum(Math.round(p.co)); });
+  const info=$("#pl-unitinfo");
+  if(info) info.innerHTML = u.id ? `Χωνευτής <b>${fmtNum(u.digester_m3)} m³</b> · ΣΗΘ <b>${fmtNum(u.capacity_kw)} kWel</b> · η<sub>el</sub> ${Math.round(ETA_EL*100)}% (ενδεικτικό)`
+    + (!(Number(u.digester_m3)>0) ? ` — <span style="color:var(--warn)">ορίστε όγκο χωνευτή στις «Μονάδες» για OLR/HRT</span>` : "") : "";
+  const os=olrState(k.olr), hs=hrtState(k.hrt), cs=cnState(k.cn), vs=coverState(k.cover);
+  const st=$("#pl-stats"); if(!st) return;
+  st.innerHTML =
+    statTile("Τροφοδοσία", fmtNum(k.mass)+" t/ημ")+
+    statTile("Οργανική ουσία (VS)", k.vs.toFixed(2)+" t/ημ")+
+    statTile("OLR (kg VS/m³·d)", k.olr!=null&&k.mass>0 ? k.olr.toFixed(2) : "—", stColor(k.mass>0?os:"na"))+
+    statTile("HRT (ημέρες)", k.hrt!=null ? k.hrt.toFixed(0) : "—", stColor(hs))+
+    statTile("Αναμ. CH₄", fmtNum(Math.round(k.ch4))+" m³/ημ")+
+    statTile("Αναμ. ηλεκτρ.", fmtNum(Math.round(k.kwh))+" kWh/ημ")+
+    statTile("Κάλυψη ΣΗΘ", k.cover!=null ? Math.round(k.cover)+"%" : "—", stColor(vs))+
+    statTile("Κόστος", k.cost>=0 ? fmtNum(Math.round(k.cost))+" €/ημ" : "έσοδο "+fmtNum(Math.round(-k.cost))+" €", k.cost<0?"var(--ok)":"var(--ink)")+
+    statTile("≈ C:N μίγματος", k.cn!=null ? k.cn.toFixed(0) : "—", stColor(cs));
+  const w=[];
+  if(k.mass>0){
+    if(os==="crit"||os==="warn") w.push(`<b>Υψηλό οργανικό φορτίο (OLR ${k.olr.toFixed(2)})</b> — πάνω από 4 kg VS/m³·d υπάρχει κίνδυνος υπερφόρτωσης και οξίνισης. Αύξησε τη φόρτιση σταδιακά (≤10%/εβδομάδα) και παρακολούθησε FOS/TAC.`);
+    if(os==="low") w.push(`<b>Χαμηλό OLR (${k.olr.toFixed(2)})</b> — ο χωνευτής υποαξιοποιείται.`);
+    if(hs==="crit"||hs==="warn") w.push(`<b>Μικρός χρόνος παραμονής (HRT ${k.hrt.toFixed(0)} ημ.)</b> — κάτω από 20 ημέρες κινδυνεύουν να «ξεπλυθούν» οι μεθανογόνοι μικροοργανισμοί.`);
+    if(k.cn!=null && k.cn<15) w.push(`<b>Χαμηλό C:N (${k.cn.toFixed(0)})</b> — κίνδυνος αναστολής από αμμωνία (NH₃). Πρόσθεσε υπόστρωμα πλούσιο σε άνθρακα (π.χ. ενσίρωμα).`);
+    if(k.cn!=null && k.cn>35) w.push(`<b>Υψηλό C:N (${k.cn.toFixed(0)})</b> — πιθανή έλλειψη αζώτου. Πρόσθεσε κοπριά.`);
+    if(vs==="warn" && k.cover<90) w.push(`Η συνταγή καλύπτει <b>~${Math.round(k.cover)}%</b> του πλήρους φορτίου ΣΗΘ.`
+      + (os==="warn"||os==="crit" ? ` Ο όγκος του χωνευτή είναι ο περιοριστικός παράγοντας — προτίμησε υποστρώματα με υψηλότερη απόδοση ανά τόνο VS αντί για περισσότερη μάζα.` : ""));
+    if(vs==="warn" && k.cover>110) w.push(`Πλεόνασμα αερίου <b>~${Math.round(k.cover-100)}%</b> πάνω από την ισχύ ΣΗΘ — πιθανή καύση σε πυρσό.`);
+    if(P.prev && P.prev.vs>0){ const ch=(k.vs-P.prev.vs)/P.prev.vs*100;
+      if(Math.abs(ch)>10) w.push(`<b>Απότομη μεταβολή φόρτισης (${ch>0?"+":""}${ch.toFixed(0)}% VS έναντι ${fmtDate(P.prev.date)})</b> — συστήνεται σταδιακή αλλαγή του σιτηρεσίου.`); }
+  }
+  $("#pl-warn").innerHTML = !k.mass ? "" : (w.length
+    ? `<div class="hint warn">⚠ <b>Παρατηρήσεις</b><ul>${w.map(x=>`<li>${x}</li>`).join("")}</ul></div>`
+    : `<div class="hint ok">✓ Η συνταγή είναι εντός των συνιστώμενων ορίων (OLR 1.5–4 kg VS/m³·d, HRT ≥ 20 ημ., C:N 15–35).</div>`);
+}
+async function loadPrev(){
+  const P=state.planner; P.prev=null;
+  if(P.unit_id && P.date){
+    const { data } = await sb.from("feeding_daily").select("feed_date,vs_t").eq("tenant_id",state.tenantId)
+      .eq("unit_id",P.unit_id).lt("feed_date",P.date).order("feed_date",{ascending:false}).limit(1);
+    if(data && data[0]) P.prev={date:data[0].feed_date, vs:Number(data[0].vs_t)};
+  }
+  updatePlannerCalc();
+}
+async function loadRecipes(){
+  const { data } = await sb.from("recipes").select("*").eq("tenant_id",state.tenantId).order("name");
+  state.recipes=data||[];
+}
+function renderRecipeSelect(){
+  const s=$("#pl-recipe"); if(!s) return; const P=state.planner;
+  if(P.recipe_id && !state.recipes.some(r=>r.id===P.recipe_id)) P.recipe_id="";
+  s.innerHTML=`<option value="">— χωρίς συνταγή —</option>`+state.recipes.map(r=>
+    `<option value="${r.id}"${r.id===P.recipe_id?" selected":""}>${esc(r.name)}${r.unit_id?` · ${esc(unitName(r.unit_id))}`:""}</option>`).join("");
+  const del=$("#pl-recipe-del");
+  if(del){ del.classList.toggle("hidden",!P.recipe_id);
+    del.onclick=async()=>{ const r=state.recipes.find(x=>x.id===P.recipe_id); if(!r||!confirm(`Διαγραφή συνταγής «${r.name}»;`)) return;
+      const { error } = await sb.from("recipes").delete().eq("id",r.id); if(error) return toast("Σφάλμα: "+error.message);
+      P.recipe_id=""; await loadRecipes(); renderRecipeSelect(); toast("Η συνταγή διαγράφηκε"); }; }
+  s.onchange=()=>{
+    const r=state.recipes.find(x=>x.id===s.value); P.recipe_id=s.value;
+    if(r){ P.lines=(r.items||[]).map(it=>({feedstock_id:it.feedstock_id, mass_t:it.mass_t}));
+      if(r.unit_id && state.units.some(u=>u.id===r.unit_id)){ P.unit_id=r.unit_id; $("#pl-unit").value=r.unit_id; }
+      drawLines(); loadPrev(); toast(`Φορτώθηκε η συνταγή «${r.name}»`); }
+    if(del) del.classList.toggle("hidden",!r);
+  };
+}
+function saveRecipeForm(){
+  const P=state.planner, lines=P.lines.filter(l=>l.feedstock_id && Number(l.mass_t)>0);
+  if(!lines.length) return toast("Η συνταγή είναι κενή — βάλε ποσότητες.");
+  const cur=state.recipes.find(r=>r.id===P.recipe_id), body=el("div");
+  body.innerHTML=`<div class="field"><label>Όνομα συνταγής</label><input class="input" id="rc-name" value="${esc(cur?cur.name:"")}" placeholder="π.χ. Χειμερινό σιτηρέσιο — Χωνευτής 1"></div>
+    ${cur?`<label class="small" style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><input type="checkbox" id="rc-over" checked> Ενημέρωση της «${esc(cur.name)}» (αλλιώς νέα συνταγή)</label>`:""}
+    <p class="small muted">${lines.length} υποστρώματα · ${fmtNum(lines.reduce((s,l)=>s+Number(l.mass_t),0))} t/ημ · ${esc(unitName(P.unit_id))}</p>`;
+  modal("Αποθήκευση συνταγής", body, async close=>{
+    const name=$("#rc-name").value.trim(); if(!name) return toast("Δώσε όνομα.");
+    const items=lines.map(l=>({feedstock_id:l.feedstock_id, mass_t:Number(l.mass_t)}));
+    const over=cur && $("#rc-over") && $("#rc-over").checked;
+    const res = over ? await sb.from("recipes").update({name,items,unit_id:P.unit_id||null}).eq("id",cur.id)
+                     : await sb.from("recipes").insert({tenant_id:state.tenantId,unit_id:P.unit_id||null,name,items,created_by:state.profile.id}).select().single();
+    if(res.error) return toast("Σφάλμα: "+res.error.message);
+    if(!over && res.data) P.recipe_id=res.data.id;
+    close(); toast("Η συνταγή αποθηκεύτηκε"); await loadRecipes(); renderRecipeSelect();
+  });
+}
+async function commitFeeding(){
+  const P=state.planner, T=state.tenantId, lines=P.lines.filter(l=>l.feedstock_id && Number(l.mass_t)>0);
+  if(!P.unit_id) return toast("Επίλεξε μονάδα.");
+  if(!P.date) return toast("Επίλεξε ημερομηνία.");
+  if(!lines.length) return toast("Πρόσθεσε τουλάχιστον ένα υπόστρωμα με ποσότητα.");
+  const { count } = await sb.from("feeding").select("id",{count:"exact",head:true}).eq("tenant_id",T).eq("unit_id",P.unit_id).eq("feed_date",P.date);
+  if(count && !confirm(`Υπάρχει ήδη τροφοδοσία για ${fmtDate(P.date)} (${unitName(P.unit_id)}) — αντικατάσταση;`)) return;
+  const btn=$("#pl-commit"); if(btn) btn.disabled=true;
+  const { data, error } = await sb.rpc("replace_feeding",{p_tenant:T, p_unit:P.unit_id, p_date:P.date,
+    p_items:lines.map(l=>({feedstock_id:l.feedstock_id, mass_t:Number(l.mass_t)}))});
+  if(btn) btn.disabled=false;
+  if(error) return toast("Σφάλμα: "+error.message);
+  toast(`Καταχωρήθηκε η τροφοδοσία ${fmtDate(P.date)} — ${data} υποστρώματα`);
+  state.feedLog.month=P.date.slice(0,7); const fm=$("#fl-month"); if(fm) fm.value=state.feedLog.month;
+  refreshAlertBadge(); loadFeedingLog(); loadPrev();
+}
+async function loadFeedingLog(){
+  const FL=state.feedLog, T=state.tenantId, body=$("#fl-body"); if(!body) return;
+  const { from, to } = monthRange(FL.month);
+  let q=sb.from("feeding_daily").select("*").eq("tenant_id",T).gte("feed_date",from).lt("feed_date",to).order("feed_date",{ascending:false}).limit(1000);
+  let pq=sb.from("production").select("unit_id,log_date,biogas_m3,ch4_pct").eq("tenant_id",T).gte("log_date",from).lt("log_date",to).limit(2000);
+  if(FL.unit){ q=q.eq("unit_id",FL.unit); pq=pq.eq("unit_id",FL.unit); }
+  const [{ data:days, error }, { data:prod }] = await Promise.all([q,pq]);
+  if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  const pm={}; (prod||[]).forEach(p=>{ pm[p.unit_id+"|"+p.log_date]=p; });
+  const rows=(days||[]).slice().sort((a,b)=>String(b.feed_date).localeCompare(String(a.feed_date))||unitName(a.unit_id).localeCompare(unitName(b.unit_id),"el"));
+  body.innerHTML = rows.length ? table(
+    ["Ημ/νία","Μονάδα","t","VS (t)","OLR","HRT","Αναμ. CH₄ m³","Πραγμ. CH₄ m³","Απόδοση","Κόστος €",""],
+    rows.map(d=>{
+      const p=pm[d.unit_id+"|"+d.feed_date];
+      const act=(p && p.biogas_m3!=null && p.ch4_pct!=null) ? p.biogas_m3*p.ch4_pct/100 : null;
+      const eff=(act!=null && Number(d.ch4_expected_m3)>0) ? act/Number(d.ch4_expected_m3)*100 : null;
+      return [fmtDate(d.feed_date), esc(unitName(d.unit_id)), fmtNum(d.mass_t), Number(d.vs_t).toFixed(2),
+        d.olr!=null ? stBadge(olrState(+d.olr),Number(d.olr).toFixed(2)) : "—",
+        d.hrt!=null ? stBadge(hrtState(+d.hrt),Number(d.hrt).toFixed(0)) : "—",
+        fmtNum(Math.round(d.ch4_expected_m3)), act!=null ? fmtNum(Math.round(act)) : "—",
+        eff!=null ? stBadge(effState(eff),Math.round(eff)+"%") : "—", fmtNum(Math.round(d.cost_eur)),
+        `<span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn ghost sm" data-open="${d.unit_id}|${d.feed_date}">Άνοιγμα</button>${canWrite()?`<button class="btn ghost sm danger" data-delday="${d.unit_id}|${d.feed_date}">✕</button>`:""}</span>`];
+    })) : `<div class="empty">Καμία τροφοδοσία για ${esc(FL.month)}.</div>`;
+  body.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{ const [u,d]=b.dataset.open.split("|"); openFeedingDay(u,d); });
+  body.querySelectorAll("[data-delday]").forEach(b=>b.onclick=async()=>{
+    const [u,d]=b.dataset.delday.split("|"); if(!confirm(`Διαγραφή τροφοδοσίας ${fmtDate(d)} — ${unitName(u)};`)) return;
+    const { error:e } = await sb.from("feeding").delete().eq("tenant_id",T).eq("unit_id",u).eq("feed_date",d);
+    if(e) return toast("Σφάλμα: "+e.message); toast("Διαγράφηκε"); refreshAlertBadge(); loadFeedingLog(); loadPrev();
+  });
+}
+async function openFeedingDay(unit,date){
+  const { data, error } = await sb.from("feeding").select("feedstock_id,mass_t").eq("tenant_id",state.tenantId).eq("unit_id",unit).eq("feed_date",date);
+  if(error) return toast("Σφάλμα: "+error.message);
+  const P=state.planner; P.unit_id=unit; P.date=date; P.recipe_id="";
+  P.lines=(data||[]).map(r=>({feedstock_id:r.feedstock_id, mass_t:r.mass_t}));
+  $("#pl-unit").value=unit; $("#pl-date").value=date; renderRecipeSelect(); drawLines(); loadPrev();
+  const m=$("#main"); if(m) m.scrollTop=0; window.scrollTo({top:0,behavior:"smooth"});
+  toast(`Φορτώθηκε η τροφοδοσία ${fmtDate(date)} — ${unitName(unit)}`);
+}
+
+/* ============================ Digestate & nutrient balance ============================ */
+const nhaState = v => v==null ? "na" : v>N_LIMIT ? "crit" : v>=N_LIMIT*0.9 ? "warn" : "ok";
+async function renderDigestate(){
+  const main=$("#main"), now=new Date().toISOString();
+  const DG=state.digLog||(state.digLog={month:now.slice(0,7),unit:""});
+  main.innerHTML=`<div class="page-head">
+      <div><h1 class="page-title">Χώνευμα (digestate)</h1>
+        <div class="sub">Παραγωγή, διάθεση & θρεπτικά — έλεγχος Οδηγίας Νιτρορύπανσης (${N_LIMIT} kg N/ha/έτος σε ΖΕΝ)</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="margin:0"><label>Μήνας</label><input class="input" id="dg-month" type="month"></div>
+        <div class="field" style="margin:0"><label>Μονάδα</label><select class="input" id="dg-unit"><option value="">Όλες</option></select></div>
+        <button class="btn" id="dg-xlsx">⤓ Excel</button>
+        ${canWrite()?`<button class="btn primary" id="dg-new">＋ Εγγραφή</button>`:""}
+      </div></div>
+    <div class="stats" id="dg-stats"></div>
+    <div class="panel" style="margin-bottom:16px"><h3>Κινήσεις μήνα</h3><div class="body" id="dg-body"><div class="empty">Φόρτωση…</div></div></div>
+    <div class="panel"><h3>Ισοζύγιο αζώτου ανά παραλήπτη / αγροτεμάχιο — έτος <span id="dg-year"></span></h3><div class="body" id="dg-ytd"></div></div>`;
+  const du=$("#dg-unit"); state.units.forEach(u=>du.append(el("option",{value:u.id},u.name))); du.value=DG.unit;
+  $("#dg-month").value=DG.month;
+  $("#dg-month").onchange=e=>{ DG.month=e.target.value||now.slice(0,7); loadDigestate(); };
+  du.onchange=()=>{ DG.unit=du.value; loadDigestate(); };
+  $("#dg-xlsx").onclick=exportDigestateXlsx;
+  if(canWrite()) $("#dg-new").onclick=()=>digestateForm();
+  loadDigestate();
+}
+async function loadDigestate(){
+  const DG=state.digLog, T=state.tenantId, { from, to } = monthRange(DG.month), year=DG.month.slice(0,4);
+  let q=sb.from("digestate").select("*").eq("tenant_id",T).gte("log_date",from).lt("log_date",to).order("log_date",{ascending:false}).limit(1000);
+  if(DG.unit) q=q.eq("unit_id",DG.unit);
+  const yq=sb.from("digestate").select("*").eq("tenant_id",T).eq("destination","field")
+    .gte("log_date",year+"-01-01").lt("log_date",(Number(year)+1)+"-01-01").limit(5000);   // limit is per field, across plants
+  const [{ data:rows, error }, { data:yr }] = await Promise.all([q,yq]);
+  const body=$("#dg-body"); if(!body) return;
+  if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  state._dig={rows:rows||[], month:DG.month};
+  const mass=(rows||[]).reduce((s,r)=>s+(Number(r.mass_t)||0),0);
+  const nut=k=>(rows||[]).reduce((s,r)=>s+(Number(r.mass_t)||0)*(Number(r[k])||0),0);
+  const by={};
+  (yr||[]).forEach(r=>{ const key=(r.recipient||"").trim().toLowerCase(); if(!key) return;
+    const g=by[key]||(by[key]={name:r.recipient.trim(),mass:0,n:0,area:0,count:0});
+    g.mass+=Number(r.mass_t)||0; g.n+=(Number(r.mass_t)||0)*(Number(r.n_kg_t)||0);
+    g.area=Math.max(g.area,Number(r.field_area_ha)||0); g.count++; });
+  const ytd=Object.values(by).map(g=>({...g,nha:g.area>0?g.n/g.area:null})).sort((a,b)=>(b.nha||0)-(a.nha||0));
+  const maxNha=ytd.reduce((m,g)=>Math.max(m,g.nha||0),0);
+  $("#dg-year").textContent=year;
+  $("#dg-stats").innerHTML=
+    statTile("Ποσότητα μήνα", fmtNum(mass)+" t")+
+    statTile("Άζωτο (N)", fmtNum(Math.round(nut("n_kg_t")))+" kg")+
+    statTile("P₂O₅", fmtNum(Math.round(nut("p2o5_kg_t")))+" kg")+
+    statTile("K₂O", fmtNum(Math.round(nut("k2o_kg_t")))+" kg")+
+    statTile("Μέγιστο N/ha (έτος)", ytd.length ? Math.round(maxNha)+" kg" : "—", stColor(nhaState(ytd.length?maxNha:null)));
+  body.innerHTML = (rows||[]).length ? table(
+    ["Ημ/νία","Μονάδα","Ποσότητα t","Προορισμός","Παραλήπτης","Έκταση ha","N kg/t","N kg","N kg/ha",""],
+    rows.map(r=>{ const n=(Number(r.mass_t)||0)*(Number(r.n_kg_t)||0), nha=(r.destination==="field"&&Number(r.field_area_ha)>0)?n/Number(r.field_area_ha):null;
+      return [fmtDate(r.log_date), esc(unitName(r.unit_id)), fmtNum(r.mass_t), esc(DIG_DEST[r.destination]||r.destination), esc(r.recipient||"—"),
+        fmtNum(r.field_area_ha), fmtNum(r.n_kg_t), fmtNum(Math.round(n)), nha!=null?fmtNum(Math.round(nha)):"—",
+        canWrite()?`<span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn ghost sm" data-edit="${r.id}">✎</button><button class="btn ghost sm danger" data-del="${r.id}">✕</button></span>`:""]; })
+  ) : `<div class="empty">Καμία κίνηση για ${esc(DG.month)}.</div>`;
+  (rows||[]).forEach(r=>{
+    const e=$(`#dg-body [data-edit="${r.id}"]`); if(e) e.onclick=()=>digestateForm(r);
+    const d=$(`#dg-body [data-del="${r.id}"]`); if(d) d.onclick=async()=>{ if(!confirm("Διαγραφή εγγραφής;")) return;
+      const { error:er } = await sb.from("digestate").delete().eq("id",r.id); if(er) return toast("Σφάλμα: "+er.message);
+      toast("Διαγράφηκε"); refreshAlertBadge(); loadDigestate(); };
+  });
+  $("#dg-ytd").innerHTML = ytd.length ? table(
+    ["Παραλήπτης / αγροτεμάχιο","Εφαρμογές","Ποσότητα t","N kg","Έκταση ha","N kg/ha/έτος","Όριο"],
+    ytd.map(g=>[esc(g.name), g.count, fmtNum(g.mass), fmtNum(Math.round(g.n)), g.area?fmtNum(g.area):"—",
+      g.nha!=null ? stBadge(nhaState(g.nha), Math.round(g.nha)+" kg") : `<span class="muted small">χωρίς έκταση</span>`,
+      g.nha!=null ? `${Math.round(g.nha/N_LIMIT*100)}%` : "—"])
+  ) : `<div class="empty">Καμία εφαρμογή σε αγρό το ${esc(year)}.</div>`;
+}
+function exportDigestateXlsx(){
+  if(!state._dig || !state._dig.rows.length) return toast("Καμία εγγραφή για εξαγωγή.");
+  if(!window.XLSX) return toast("Το Excel library δεν φόρτωσε.");
+  const rows=state._dig.rows.map(r=>({Ημερομηνία:r.log_date, Μονάδα:unitName(r.unit_id), "Ποσότητα (t)":r.mass_t,
+    Προορισμός:DIG_DEST[r.destination]||r.destination, Παραλήπτης:r.recipient||"", "Έκταση (ha)":r.field_area_ha,
+    "N (kg/t)":r.n_kg_t, "P2O5 (kg/t)":r.p2o5_kg_t, "K2O (kg/t)":r.k2o_kg_t, "N σύνολο (kg)":(Number(r.mass_t)||0)*(Number(r.n_kg_t)||0), Σημειώσεις:r.notes||""}));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Χώνευμα");
+  XLSX.writeFile(wb,`Χώνευμα_${state._dig.month}.xlsx`); toast("Excel κατέβηκε");
+}
+async function digestateForm(r){
+  const isEdit=!!(r&&r.id), body=el("div"), v=k=>(r&&r[k]!=null)?r[k]:"";
+  const uopts=state.units.map(u=>`<option value="${u.id}"${r&&r.unit_id===u.id?" selected":""}>${esc(u.name)}</option>`).join("");
+  body.innerHTML=`
+    <div class="row">
+      <div class="field"><label>Ημερομηνία</label><input class="input" id="dgf-date" type="date" value="${v("log_date")||new Date().toISOString().slice(0,10)}"></div>
+      <div class="field"><label>Μονάδα</label><select class="input" id="dgf-unit"><option value="">—</option>${uopts}</select></div>
+      <div class="field"><label>Ποσότητα (t)</label><input class="input" id="dgf-mass" type="number" step="any" min="0" value="${v("mass_t")}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Προορισμός</label><select class="input" id="dgf-dest">${Object.entries(DIG_DEST).map(([k,l])=>`<option value="${k}"${(r&&r.destination||"field")===k?" selected":""}>${l}</option>`).join("")}</select></div>
+      <div class="field"><label>Παραλήπτης / αγροτεμάχιο</label><input class="input" id="dgf-rec" list="dgf-recs" value="${esc(v("recipient"))}"><datalist id="dgf-recs"></datalist></div>
+      <div class="field" id="dgf-areabox"><label>Έκταση (ha)</label><input class="input" id="dgf-area" type="number" step="any" min="0" value="${v("field_area_ha")}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>N (kg/t)</label><input class="input" id="dgf-n" type="number" step="any" min="0" value="${v("n_kg_t")}"></div>
+      <div class="field"><label>P₂O₅ (kg/t)</label><input class="input" id="dgf-p" type="number" step="any" min="0" value="${v("p2o5_kg_t")}"></div>
+      <div class="field"><label>K₂O (kg/t)</label><input class="input" id="dgf-k" type="number" step="any" min="0" value="${v("k2o_kg_t")}"></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:-4px 0 12px">
+      <button class="btn sm" id="dgf-prefill" type="button">↧ Από τελευταία ανάλυση χωνεύματος</button>
+      <span class="small muted" id="dgf-msg"></span></div>
+    <div class="hint info" id="dgf-calc" style="margin-bottom:12px"></div>
+    <div class="field"><label>Σημειώσεις</label><textarea class="input" id="dgf-notes" rows="2">${esc(v("notes"))}</textarea></div>`;
+  const q=s=>body.querySelector(s);
+  const { data:recs } = await sb.from("digestate").select("recipient").eq("tenant_id",state.tenantId).not("recipient","is",null).limit(500);
+  [...new Set((recs||[]).map(x=>(x.recipient||"").trim()).filter(Boolean))].forEach(n=>q("#dgf-recs").append(el("option",{value:n})));
+  const calc=()=>{ const m=Number(q("#dgf-mass").value)||0, a=Number(q("#dgf-area").value)||0, isF=q("#dgf-dest").value==="field";
+    q("#dgf-areabox").style.display=isF?"":"none";
+    const n=m*(Number(q("#dgf-n").value)||0);
+    q("#dgf-calc").innerHTML = `N <b>${fmtNum(Math.round(n))} kg</b> · P₂O₅ <b>${fmtNum(Math.round(m*(Number(q("#dgf-p").value)||0)))} kg</b> · K₂O <b>${fmtNum(Math.round(m*(Number(q("#dgf-k").value)||0)))} kg</b>`
+      + (isF && a>0 ? ` · <b>${Math.round(n/a)} kg N/ha</b> σε αυτή την εφαρμογή` : ""); };
+  ["#dgf-mass","#dgf-area","#dgf-n","#dgf-p","#dgf-k"].forEach(s=>q(s).oninput=calc); q("#dgf-dest").onchange=calc;
+  const prefill=async()=>{
+    const unit=q("#dgf-unit").value, msg=q("#dgf-msg");
+    let sq=sb.from("samples").select("id,code,taken_at").eq("tenant_id",state.tenantId).eq("kind","digestate").order("taken_at",{ascending:false}).limit(1);
+    if(unit) sq=sq.eq("unit_id",unit);
+    const { data:s } = await sq;
+    const set=(id,val)=>{ if(val!=null) q(id).value=val; };
+    if(!s || !s[0]){ set("#dgf-n",4.5); set("#dgf-p",1.8); set("#dgf-k",5.0);
+      msg.textContent="Δεν βρέθηκε ανάλυση χωνεύματος — μπήκαν τυπικές τιμές (N 4.5 · P₂O₅ 1.8 · K₂O 5.0 kg/t)."; calc(); return; }
+    const { data:an } = await sb.from("analyses").select("value,parameter:parameters(code)").eq("sample_id",s[0].id);
+    const get=c=>{ const a=(an||[]).find(x=>x.parameter && x.parameter.code===c); return a?a.value:null; };
+    set("#dgf-n",get("dig_n")); set("#dgf-p",get("dig_p2o5")); set("#dgf-k",get("dig_k2o"));
+    msg.textContent=`Από δείγμα ${s[0].code||"—"} (${fmtDate(s[0].taken_at)}).`; calc();
+  };
+  q("#dgf-prefill").onclick=prefill;
+  if(!isEdit) await prefill(); else calc();
+  modal(isEdit?"Επεξεργασία κίνησης χωνεύματος":"Νέα κίνηση χωνεύματος", body, async close=>{
+    const num=id=>{ const x=$(id).value; return x!==""?Number(x):null; };
+    const dest=$("#dgf-dest").value;
+    const payload={log_date:$("#dgf-date").value||null, unit_id:$("#dgf-unit").value||null, mass_t:num("#dgf-mass"), destination:dest,
+      recipient:$("#dgf-rec").value.trim()||null, field_area_ha:dest==="field"?num("#dgf-area"):null,
+      n_kg_t:num("#dgf-n"), p2o5_kg_t:num("#dgf-p"), k2o_kg_t:num("#dgf-k"), notes:$("#dgf-notes").value.trim()||null};
+    if(!payload.log_date) return toast("Συμπλήρωσε ημερομηνία.");
+    if(dest==="field" && !payload.recipient) return toast("Για εφαρμογή σε αγρό συμπλήρωσε παραλήπτη / αγροτεμάχιο.");
+    const { error } = isEdit ? await sb.from("digestate").update(payload).eq("id",r.id)
+                             : await sb.from("digestate").insert({...payload,tenant_id:state.tenantId,created_by:state.profile.id});
+    if(error) return toast("Σφάλμα: "+error.message);
+    close(); toast(isEdit?"Αποθηκεύτηκε":"Καταχωρήθηκε"); refreshAlertBadge();
+    if(payload.log_date){ state.digLog.month=payload.log_date.slice(0,7); const dm=$("#dg-month"); if(dm) dm.value=state.digLog.month; }
+    loadDigestate();
+  });
+}
+
+/* ============================ Alarms centre ============================ */
+async function renderAlerts(){
+  const main=$("#main"), AF=state.alertFilter||(state.alertFilter="open");
+  main.innerHTML=`<div class="page-head">
+      <div><h1 class="page-title">Ειδοποιήσεις</h1>
+        <div class="sub">Αυτόματοι συναγερμοί της βάσης όταν δείκτες βγαίνουν εκτός ορίων — σταθερότητα χωνευτή, αέριο, ΣΗΘ, OLR/HRT, άζωτο</div></div>
+      <div style="display:flex;gap:6px"><button class="btn sm ${AF==="open"?"primary":""}" data-af="open">Ενεργές</button>
+        <button class="btn sm ${AF==="all"?"primary":""}" data-af="all">Ιστορικό</button></div></div>
+    <div class="stats" id="al-stats"></div>
+    <div class="panel" style="margin-bottom:16px"><div class="body" id="al-body"><div class="empty">Φόρτωση…</div></div></div>
+    ${isAdmin()?`<div class="panel"><h3>📧 Παραλήπτες email</h3><div class="body" id="al-recips"></div></div>`:""}`;
+  $$("[data-af]").forEach(b=>b.onclick=()=>{ state.alertFilter=b.dataset.af; renderAlerts(); });
+  const T=state.tenantId, weekAgo=new Date(Date.now()-7*864e5).toISOString();
+  let q=sb.from("alerts").select("*,unit:units(name)").eq("tenant_id",T).order("updated_at",{ascending:false}).limit(200);
+  if(AF==="open") q=q.is("resolved_at",null);
+  const [{ data, error }, { data:openAll }, { count:res7 }] = await Promise.all([q,
+    sb.from("alerts").select("severity,acknowledged_at").eq("tenant_id",T).is("resolved_at",null).limit(1000),
+    sb.from("alerts").select("id",{count:"exact",head:true}).eq("tenant_id",T).gte("resolved_at",weekAgo)]);
+  const body=$("#al-body"); if(!body) return;
+  if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  const o=openAll||[];
+  $("#al-stats").innerHTML=
+    statTile("Κρίσιμες ενεργές", o.filter(a=>a.severity==="critical").length, o.some(a=>a.severity==="critical")?"var(--high)":"var(--ok)")+
+    statTile("Προειδοποιήσεις", o.filter(a=>a.severity!=="critical").length, o.some(a=>a.severity!=="critical")?"var(--warn)":"var(--ok)")+
+    statTile("Χωρίς επιβεβαίωση", o.filter(a=>!a.acknowledged_at).length)+
+    statTile("Επιλύθηκαν (7 ημ.)", res7||0, "var(--ok)");
+  const list=(data||[]).slice().sort((a,b)=> AF==="open"
+    ? ((b.severity==="critical")-(a.severity==="critical")) || ((!b.acknowledged_at)-(!a.acknowledged_at)) || String(b.updated_at).localeCompare(String(a.updated_at))
+    : String(b.updated_at).localeCompare(String(a.updated_at)));
+  body.innerHTML = list.length ? table(
+    ["Χρόνος","Σοβαρότητα","Μονάδα","Πηγή","Μήνυμα","Κατάσταση",""],
+    list.map(a=>[`<span class="small">${fmtDateTime(a.updated_at)}</span>`, sevBadge(a.severity), esc(a.unit?.name||"—"),
+      esc(ALERT_KIND[a.kind]||a.kind), `<div class="cell-wrap">${esc(a.message||a.metric||"")}</div>`,
+      alertStateBadge(a)+(a.emailed_at?` <span title="Στάλθηκε email ${fmtDateTime(a.emailed_at)}">✉</span>`:""),
+      (!a.resolved_at && !a.acknowledged_at && canWrite()) ? `<button class="btn sm" data-ack="${a.id}">✓ Επιβεβαίωση</button>` : ""])
+  ) : `<div class="empty">${AF==="open"?"Καμία ενεργή ειδοποίηση — όλοι οι δείκτες εντός ορίων ✓":"Δεν υπάρχει ιστορικό ειδοποιήσεων."}</div>`;
+  body.querySelectorAll("[data-ack]").forEach(b=>b.onclick=async()=>{
+    b.disabled=true;
+    const { error:e } = await sb.rpc("acknowledge_alert",{p_id:b.dataset.ack});
+    if(e){ b.disabled=false; return toast("Σφάλμα: "+e.message); }
+    toast("Επιβεβαιώθηκε"); refreshAlertBadge(); renderAlerts();
+  });
+  if(isAdmin()) loadRecipients();
+}
+async function loadRecipients(){
+  const box=$("#al-recips"); if(!box) return;
+  const { data, error } = await sb.from("alert_recipients").select("*").eq("tenant_id",state.tenantId).order("email");
+  if(error){ box.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  box.innerHTML=`<div style="padding:14px 18px 4px">
+      <div class="hint info" style="margin-bottom:12px">Κάθε 5′ στέλνεται <b>ένα συνοπτικό email ανά παραλήπτη</b> με τους νέους συναγερμούς (και ξανά αν μια προειδοποίηση γίνει κρίσιμη).
+        Χρειάζεται μία φορά ενεργοποίηση του Edge Function <code>send-alerts</code> — βλ. <code>docs/ALERTS_EMAIL.md</code>.</div>
+      <div class="row" style="align-items:flex-end">
+        <div class="field"><label>Email</label><input class="input" id="rc-email" type="email" placeholder="operator@example.gr"></div>
+        <div class="field"><label>Λαμβάνει</label><select class="input" id="rc-sev"><option value="warning">Όλες (προειδοποιήσεις & κρίσιμες)</option><option value="critical">Μόνο κρίσιμες</option></select></div>
+        <div class="field" style="flex:0 0 auto"><button class="btn primary" id="rc-add">＋ Προσθήκη</button></div>
+      </div></div>` + ((data||[]).length ? table(["Email","Λαμβάνει","Ενεργό",""],
+      data.map(r=>[esc(r.email), r.min_severity==="critical"?"Μόνο κρίσιμες":"Όλες",
+        `<input type="checkbox" data-en="${r.id}" ${r.enabled?"checked":""}>`, `<button class="btn ghost sm danger" data-rdel="${r.id}">✕</button>`]))
+      : `<div class="empty">Κανένας παραλήπτης ακόμα.</div>`);
+  $("#rc-add").onclick=async()=>{
+    const email=$("#rc-email").value.trim().toLowerCase();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast("Μη έγκυρο email.");
+    const { error:e } = await sb.from("alert_recipients").insert({tenant_id:state.tenantId, email, min_severity:$("#rc-sev").value});
+    if(e) return toast(/duplicate|unique/i.test(e.message)?"Το email υπάρχει ήδη.":"Σφάλμα: "+e.message);
+    toast("Προστέθηκε"); loadRecipients();
+  };
+  box.querySelectorAll("[data-en]").forEach(c=>c.onchange=async()=>{
+    const { error:e } = await sb.from("alert_recipients").update({enabled:c.checked}).eq("id",c.dataset.en);
+    toast(e?"Σφάλμα: "+e.message:(c.checked?"Ενεργοποιήθηκε":"Απενεργοποιήθηκε")); });
+  box.querySelectorAll("[data-rdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("Αφαίρεση παραλήπτη;")) return;
+    const { error:e } = await sb.from("alert_recipients").delete().eq("id",b.dataset.rdel);
+    if(e) return toast("Σφάλμα: "+e.message); toast("Αφαιρέθηκε"); loadRecipients(); });
+}
+
 
 /* ============================ helpers: table builder ============================ */
 function table(headers, rows, rowClicks){
@@ -1652,11 +2577,35 @@ const I18N = {
   "Παραγωγή":"Production","Ημερήσιο log λειτουργίας & δείκτες απόδοσης (KPIs)":"Daily operation log & KPIs",
   "＋ Εγγραφή":"+ Entry","Νέα εγγραφή παραγωγής":"New production entry","Επεξεργασία εγγραφής":"Edit entry",
   "Ηλ. ενέργεια":"Electricity","Μ.Ο. CH₄":"Avg CH₄","Διαθεσιμότητα ΣΗΘ":"CHP availability",
-  "Ειδική απόδοση":"Specific yield","Τροφοδοσία":"Feedstock","Τροφοδοσία (t)":"Feedstock (t)",
+  "Ειδική απόδοση":"Specific yield","Τροφοδοσία":"Feeding","Τροφοδοσία (t)":"Feedstock (t)",
   "Βιοαέριο (m³)":"Biogas (m³)","Ώρες ΣΗΘ":"CHP hours","kWh ηλεκτρ.":"kWh el","kWh θερμ.":"kWh th",
   "Χωνευτής":"Digester","Υπόστρωμα/Τροφοδοσία":"Substrate/Feed","Βιοαέριο":"Biogas","Χώνευμα (digestate)":"Digestate",
   "Εισροή":"Influent","Εκροή":"Effluent","Όνομα μονάδας / χωνευτή":"Plant / digester name",
   "Ισχύς ΣΗΘ (kWel)":"CHP capacity (kWel)","Όγκος χωνευτή (m³)":"Digester volume (m³)",
+  // phase 7 — feedstocks, feeding, digestate, alarms
+  "Χώνευμα":"Digestate","Ειδοποιήσεις":"Alerts","Υποστρώματα":"Feedstocks",
+  "＋ Νέο υπόστρωμα":"+ New feedstock","Νέο υπόστρωμα":"New feedstock","Επεξεργασία υποστρώματος":"Edit feedstock","Προσαρμογή υποστρώματος":"Customize feedstock",
+  "Κατηγορία":"Category","Τιμή €/t":"Price €/t","Τιμή (€/t)":"Price (€/t)",
+  "Κοπριά":"Manure","Ενεργειακή καλλιέργεια":"Energy crop","Αγροβιομηχανικό":"Agro-industrial","Απόβλητα τροφίμων":"Food waste",
+  "Σχεδιασμός σιτηρεσίου":"Diet planner","Μονάδα / χωνευτής":"Plant / digester","Συνταγή":"Recipe","— χωρίς συνταγή —":"— no recipe —",
+  "＋ Υπόστρωμα":"+ Feedstock","💾 Αποθήκευση συνταγής":"💾 Save recipe","✔ Καταχώρηση τροφοδοσίας":"✔ Record feeding",
+  "Αποθήκευση συνταγής":"Save recipe","Όνομα συνταγής":"Recipe name","t / ημέρα":"t / day",
+  "Οργανική ουσία (VS)":"Volatile solids (VS)","OLR (kg VS/m³·d)":"OLR (kg VS/m³·d)","HRT (ημέρες)":"HRT (days)",
+  "Αναμ. CH₄":"Expected CH₄","Αναμ. ηλεκτρ.":"Expected power","Κάλυψη ΣΗΘ":"CHP coverage","Κόστος":"Cost","≈ C:N μίγματος":"≈ C:N of mix",
+  "Ημερολόγιο τροφοδοσίας":"Feeding log","Αναμ. CH₄ m³":"Exp. CH₄ m³","Πραγμ. CH₄ m³":"Actual CH₄ m³",
+  "Απόδοση":"Efficiency","Κόστος €":"Cost €","Παρατηρήσεις":"Notes",
+  "Κινήσεις μήνα":"Movements this month","Ποσότητα μήνα":"Quantity (month)","Άζωτο (N)":"Nitrogen (N)",
+  "Μέγιστο N/ha (έτος)":"Max N/ha (year)","Ποσότητα t":"Quantity t","Προορισμός":"Destination","Παραλήπτης":"Recipient",
+  "Έκταση ha":"Area ha","Παραλήπτης / αγροτεμάχιο":"Recipient / field","Εφαρμογές":"Applications","N kg/ha/έτος":"N kg/ha/yr","Όριο":"Limit",
+  "Εφαρμογή σε αγρό":"Field application","Αποθήκευση σε δεξαμενή":"Storage (tank)","Πώληση":"Sale","Επεξεργασία":"Treatment",
+  "Νέα κίνηση χωνεύματος":"New digestate movement","Επεξεργασία κίνησης χωνεύματος":"Edit digestate movement",
+  "↧ Από τελευταία ανάλυση χωνεύματος":"↧ From latest digestate analysis","Ποσότητα (t)":"Quantity (t)","Έκταση (ha)":"Area (ha)",
+  "Ενεργές":"Active","Ιστορικό":"History","Κρίσιμες ενεργές":"Critical (active)","Προειδοποιήσεις":"Warnings","Χωρίς επιβεβαίωση":"Unacknowledged",
+  "Επιλύθηκαν (7 ημ.)":"Resolved (7 d)","Χρόνος":"Time","Σοβαρότητα":"Severity","Μήνυμα":"Message","✓ Επιβεβαίωση":"✓ Acknowledge",
+  "● Κρίσιμο":"● Critical","● Προειδοποίηση":"● Warning","Ενεργή":"Active","Σε γνώση":"Acknowledged","Επιλύθηκε":"Resolved",
+  "📧 Παραλήπτες email":"📧 Email recipients","Λαμβάνει":"Receives","Ενεργό":"Enabled","＋ Προσθήκη":"+ Add",
+  "Όλες (προειδοποιήσεις & κρίσιμες)":"All (warnings & critical)","Μόνο κρίσιμες":"Critical only","Ενεργές ειδοποιήσεις":"Active alerts",
+  "🔔 Ενεργές ειδοποιήσεις":"🔔 Active alerts","Όλες →":"All →",
 };
 let LANG = localStorage.getItem("lp-lang")||"el";
 function trFull(s){

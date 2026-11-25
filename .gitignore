@@ -9,3 +9,6 @@ Thumbs.db
 .env
 .env.*
 config.local.js
+
+# local dev only (tests)
+node_modules/

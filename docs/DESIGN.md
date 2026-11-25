@@ -86,7 +86,13 @@ tenant ──< units ──< samples ──< analyses >── parameters
   - Μεταδεδομένα μονάδας/χωνευτή (ισχύς ΣΗΘ kWel, όγκος m³) + biogas τύποι δειγμάτων (χωνευτής/υπόστρωμα/βιοαέριο/χώνευμα/εισροή/εκροή).
   - Νέο module **Παραγωγή**: ημερήσιο log (τροφοδοσία t, βιοαέριο m³, CH₄ %, kWh el/th, ώρες ΣΗΘ) + KPIs (MWh, Μ.Ο. CH₄, διαθεσιμότητα ΣΗΘ, ειδική απόδοση m³/t) + Excel.
   - `db/migrations/0006_biogas.sql` (+ πίνακας `production`, RLS, audit — validated σε Postgres 16).
-- **Μελλοντικά:** feedstock recipe/OLR·HRT αυτόματα, RED III GHG savings / αειφορία (ISCC), guarantees of origin (ΔΑΠΕΕΠ), email προσκλήσεων (Edge Function), πλήρες EL/EN.
+- **Φάση 7 (BioGas operations):** ✅
+  - **Μητρώο υποστρωμάτων** (TS/VS/BMP/τιμή/C:N) με αυτόματη απόδοση m³ CH₄/t.
+  - **Τροφοδοσία**: σχεδιασμός σιτηρεσίου με live **OLR/HRT**, αναμενόμενη παραγωγή & κόστος, συνταγές, ημερολόγιο με πραγματική vs αναμενόμενη απόδοση (view `feeding_daily`, RPC `replace_feeding`).
+  - **Χώνευμα**: παραγωγή/διάθεση/θρεπτικά + έλεγχος **Οδηγίας Νιτρορύπανσης** (170 kg N/ha/έτος ανά παραλήπτη).
+  - **Ειδοποιήσεις**: αυτόματοι συναγερμοί στη βάση (triggers) για σταθερότητα χωνευτή, αέριο, ΣΗΘ, OLR/HRT, άζωτο — state-based (ενεργός→σε γνώση→επιλύθηκε, κλιμάκωση), με **email digests** (Edge Function `send-alerts` + pg_cron). Βλ. `docs/ALERTS_EMAIL.md`.
+  - DB: `migrations/0007` (+`feedstocks`,`recipes`,`feeding`,`digestate`,`alerts`,`alert_recipients`, alarm engine, tenant-ref guard) & `0008` (cron). Tests: `tests/sql/run_local.sh`, `tests/digest.test.mjs`, `tests/e2e/demo_smoke.mjs`.
+- **Μελλοντικά:** RED III GHG savings / αειφορία (ISCC), guarantees of origin (ΔΑΠΕΕΠ), ισοζύγιο μάζας-ενέργειας, email προσκλήσεων χρηστών, πλήρες EL/EN.
 
 ### Migrations (συνέχεια)
 - `0005_phase5.sql`: `profiles.last_seen` + audit guard (τα heartbeats δεν καταγράφονται).
