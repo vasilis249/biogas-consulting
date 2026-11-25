@@ -73,6 +73,15 @@
         commissioning_date: "2024-02-15", rated_thermal_input_mw: 2.6, red_case: 1, digestate_storage: "open", red_product: "electricity", offgas_combustion: false, created_at: iso(dayAt(380)) },
     ],
     recipes: [], samples: [], analyses: [], production: [], feeding: [], feeding_notes: [], digestate: [], files: [], audit_log: [], alerts: [],
+    shift_log: [], shift_tasks: [], incidents: [], maintenance_plans: [], maintenance_log: [],
+    // global emergency-card templates: injected by demo/build.js from db/seed.sql (single source of truth)
+    emergency_cards: (/*__EMERGENCY_CARDS__*/[]).map((c, i) => ({ id: "ec-" + c.scenario, tenant_id: null, created_at: iso(dayAt(400)), ...c })),
+    contacts: [
+      ["Ευρωπαϊκός αριθμός έκτακτης ανάγκης", "Έκτακτη ανάγκη", "112", true, 10], ["Πυροσβεστική", "Έκτακτη ανάγκη", "199", true, 20],
+      ["ΕΚΑΒ", "Έκτακτη ανάγκη", "166", true, 30], ["ΔΕΔΔΗΕ — βλάβες", "Δίκτυο ρεύματος", "11500", false, 40],
+      ["Service ΣΗΘ (εφημερία)", "Κατασκευαστής μηχανής", "+30 690 000 0001", false, 50],
+      ["Υπεύθυνος μονάδας", "Μηχανικός λειτουργίας", "+30 690 000 0002", false, 60],
+    ].map((c, i) => ({ id: "ct" + i, tenant_id: T, name: c[0], role: c[1], phone: c[2], phone2: null, notes: null, is_emergency: c[3], sort_order: c[4], created_at: iso(dayAt(300)) })),
     alert_recipients: [
       { id: "ar1", tenant_id: T, email: "demo@biogas.gr", min_severity: "warning", enabled: true, created_at: iso(dayAt(60)) },
       { id: "ar2", tenant_id: T, email: "owner@biogas.gr", min_severity: "critical", enabled: true, created_at: iso(dayAt(60)) },
@@ -110,7 +119,7 @@
     const reopen = ex.resolved_at != null, escalate = ex.severity === "warning" && sev === "critical";
     Object.assign(ex, { unit_id: unit, metric, value, message: msg, severity: sev, updated_at: at });
     if (reopen) ex.created_at = at;
-    if (reopen || escalate) { ex.acknowledged_at = null; ex.acknowledged_by = null; ex.emailed_at = null; }
+    if (reopen || escalate) { ex.acknowledged_at = null; ex.acknowledged_by = null; ex.ack_comment = null; ex.emailed_at = null; }
     ex.resolved_at = null;
   }
   function clear(key, at) {
@@ -184,6 +193,24 @@
         `Το μεθάνιο πέφτει 3 ημέρες συνεχόμενα: ${num6(v[3])} → ${num6(v[0])}% (−${num6(v[3] - v[0])} μονάδες) — πιθανή αρχή οξίνισης · ${uname(unit)} · ${ddmmyyyy(r.log_date)}`, kf, at);
     else clear(kf, at);
   }
+  // 0012: incident in progress (major/emergency) → alarm; closed → resolved
+  const INC_LABEL = { chp_trip: "ΣΗΘ trip", gas_leak: "διαρροή αερίου", overpressure: "υπερπίεση", blackout: "μπλακ άουτ", foam: "αφρισμός",
+    fire: "πυρκαγιά", injury: "τραυματισμός", frost: "παγετός", spill: "διαρροή υγρών" };
+  const athens = d => { const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Athens", day: "2-digit", month: "2-digit",
+    year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(d)).map(x => [x.type, x.value]));
+    return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`; };
+  function evalIncident(i, at) {
+    const key = "incident:" + i.id;
+    if (!DB.incidents.includes(i) || i.ended_at || i.severity === "minor") return clear(key, at);
+    raise(i.tenant_id, i.unit_id || null, "incident", INC_LABEL[i.kind] ? "Συμβάν: " + INC_LABEL[i.kind] : "Συμβάν", null,
+      i.severity === "emergency" ? "critical" : "warning",
+      `${i.severity === "emergency" ? "ΕΚΤΑΚΤΗ ΑΝΑΓΚΗ" : "Σοβαρό συμβάν"} ΣΕ ΕΞΕΛΙΞΗ: ${i.title} · ${i.unit_id ? uname(i.unit_id) : "μονάδα"} · από ${athens(i.started_at)}`, key, at);
+  }
+  function maintenanceStatus() {
+    return DB.maintenance_plans.map(mp => { const h = DB.production.filter(p => p.unit_id === mp.unit_id && p.tenant_id === mp.tenant_id
+        && (!mp.last_done_on || p.log_date > mp.last_done_on)).reduce((s, p) => s + (Number(p.chp_hours) || 0), 0);
+      return { ...mp, hours_since: Math.round(h * 10) / 10, hours_left: Math.round((mp.interval_hours - h) * 10) / 10 }; });
+  }
   function feedingDaily() {
     const g = {};
     DB.feeding.forEach(f => {
@@ -234,13 +261,19 @@
     } else if (table === "digestate") {
       each(newRows, r => evalDigestate(r.tenant_id, r.recipient, String(r.log_date).slice(0, 4), at));
       each(oldRows, r => evalDigestate(r.tenant_id, r.recipient, String(r.log_date).slice(0, 4), at));
+    } else if (table === "incidents") {
+      each(newRows, r => evalIncident(r, at)); each(oldRows, r => evalIncident(r, at));
+    } else if (table === "maintenance_log") {
+      each(newRows.concat(oldRows), r => { const mp = DB.maintenance_plans.find(x => x.id === r.plan_id);
+        if (mp) mp.last_done_on = DB.maintenance_log.filter(x => x.plan_id === mp.id).map(x => x.done_on).sort().pop() || null; });
     } else if (table === "units") {
       each(newRows, r => evalFeeding(r.tenant_id, r.id, at));
     } else if (table === "feedstocks") {
       each(newRows, f => [...new Set(DB.feeding.filter(x => x.feedstock_id === f.id).map(x => x.tenant_id + "|" + x.unit_id))]
         .forEach(k => { const [t, u] = k.split("|"); evalFeeding(t, u, at); }));
     }
-    const AUDITED = ["units", "parameters", "samples", "analyses", "invoices", "profiles", "files", "production", "feedstocks", "recipes", "feeding", "feeding_notes", "digestate", "alert_recipients"];
+    const AUDITED = ["units", "parameters", "samples", "analyses", "invoices", "profiles", "files", "production", "feedstocks", "recipes", "feeding", "feeding_notes", "digestate", "alert_recipients",
+      "shift_log", "shift_tasks", "incidents", "contacts", "emergency_cards", "maintenance_plans", "maintenance_log"];
     const heartbeatOnly = table === "profiles" && oldRows.length && newRows.length && newRows.every((r, i) => {
       const o = { ...oldRows[i] }, n = { ...r }; delete o.last_seen; delete n.last_seen; return JSON.stringify(o) === JSON.stringify(n); });
     if (AUDITED.includes(table) && !heartbeatOnly) {
@@ -348,6 +381,31 @@
   dig(dayAt(20), "un2", 150, "sale", "Λιπασματοποιία Θεσσαλίας", null, 5.1, 2.2, 5.6);
   dig(dayAt(6), "un2", 330, "field", SYN, 18, 5.1, 2.2, 5.6);      // pushes this field over 170 kg N/ha
 
+  // shift & safety (0012): a past CHP trip, hand-over notes, open items, CHP service plans
+  ev(dayAt(9, 3, 10), () => insertRows("incidents", [{ id: "inc1", tenant_id: T, unit_id: "un1", kind: "chp_trip", severity: "major",
+    title: "Trip ΣΗΘ — υψηλή θερμοκρασία νερού ψύξης", started_at: iso(dayAt(9, 3, 10)), ended_at: null,
+    description: "Η μηχανή σταμάτησε με κωδικό υψηλής θερμοκρασίας ψύξης. Ο πυρσός άναψε αυτόματα.", actions: null,
+    notified: "Υπεύθυνος μονάδας (τηλ. 03:20)", photo_path: null, created_by: OP, created_at: iso(dayAt(9, 3, 15)) }], dayAt(9, 3, 15)));
+  ev(dayAt(9, 4, 25), () => { const i = DB.incidents.find(x => x.id === "inc1"), old = { ...i };
+    Object.assign(i, { ended_at: iso(dayAt(9, 4, 25)), actions: "Καθαρισμός ψυγείου (φύλλα), έλεγχος στάθμης ψυκτικού, επανεκκίνηση 04:25." });
+    currentUser = OP; afterWrite("incidents", [old], [i], iso(dayAt(9, 4, 25))); });
+  [[2, "night", "Ήσυχη νύχτα. Χ2: CH₄ 50,4% στην ένδειξη των 05:00 — να το δει η πρωινή."],
+   [1, "morning", "Χ2: FOS/TAC 0,55 από το εργαστήριο. Μείωσα τα εύπεπτα στη σημερινή τροφοδοσία. Χ1 κανονικά."],
+   [1, "afternoon", "Ήρθε φορτίο τροφίμων + πουλερικών, μπήκε όλο στον Χ2 (OLR 4,35). Προσοχή αύριο."]].forEach(([d, sh, body], k) => {
+    const at = dayAt(d, sh === "night" ? 5 : sh === "morning" ? 13 : 21, 45);
+    ev(at, () => insertRows("shift_log", [{ id: "sl" + k, tenant_id: T, shift_date: dateStr(sh === "night" ? d + 1 : d), shift: sh, body, created_by: OP, created_at: iso(at) }], at));
+  });
+  ev(dayAt(1, 13, 40), () => insertRows("shift_tasks", [
+    { id: "st1", tenant_id: T, unit_id: "un2", title: "FOS/TAC Χ2 κάθε 2 ημέρες μέχρι να πέσει κάτω από 0,4", due_date: null, created_by: OP, created_at: iso(dayAt(1, 13, 40)), done_at: null, done_by: null, done_note: null },
+    { id: "st2", tenant_id: T, unit_id: "un1", title: "Έλεγχος ψυγείου ΣΗΘ (φύλλα) μετά το trip", due_date: dateStr(0), created_by: OP, created_at: iso(dayAt(1, 13, 41)), done_at: null, done_by: null, done_note: null }], dayAt(1, 13, 41)));
+  ev(dayAt(41, 9), () => insertRows("maintenance_plans", [
+    { id: "mp1", tenant_id: T, unit_id: "un1", task: "Αλλαγή λαδιών & φίλτρου λαδιού", interval_hours: 2000, last_done_on: null, notes: null, created_at: iso(dayAt(41, 9)) },
+    { id: "mp2", tenant_id: T, unit_id: "un1", task: "Μπουζί", interval_hours: 4000, last_done_on: null, notes: null, created_at: iso(dayAt(41, 9)) },
+    { id: "mp3", tenant_id: T, unit_id: "un2", task: "Αλλαγή λαδιών & φίλτρου λαδιού", interval_hours: 1000, last_done_on: null, notes: "Μικρότερο διάστημα λόγω H₂S", created_at: iso(dayAt(41, 9)) },
+    { id: "mp4", tenant_id: T, unit_id: "un2", task: "Φίλτρο ενεργού άνθρακα (αποθείωση)", interval_hours: 900, last_done_on: null, notes: null, created_at: iso(dayAt(41, 9)) }], dayAt(41, 9), ME));
+  ev(dayAt(12, 15), () => insertRows("maintenance_log", [{ id: "ml1", tenant_id: T, plan_id: "mp1", done_on: dateStr(12), engine_hours: 41250,
+    notes: "Προγραμματισμένη στάση 4,5 h", created_by: OP, created_at: iso(dayAt(12, 15)) }], dayAt(12, 15)));
+
   events.sort((a, b) => a.at - b.at).forEach(e => e.run());
   // the e-mail cron has already processed alarms older than ~10 minutes; one alarm was acknowledged by the shift operator
   DB.alerts.forEach(a => { if (!a.resolved_at && !a.acknowledged_at && (NOW - new Date(a.updated_at)) > 10 * 60000) a.emailed_at = iso(new Date(new Date(a.updated_at).getTime() + 4 * 60000)); });
@@ -364,7 +422,7 @@
       sample: (() => { const s = DB.samples.find(x => x.id === r.sample_id); return s ? { ...s, unit: U(s.unit_id) || null } : null; })() }),
     audit_log: r => ({ ...r, actor: DB.profiles.find(p => p.id === r.user_id) || null }),
   };
-  const VIEWS = { feeding_daily: feedingDaily };
+  const VIEWS = { feeding_daily: feedingDaily, maintenance_status: maintenanceStatus };
   // Constraints of migration 0010 (production): CHECK ranges + unique (unit_id, log_date).
   const CHECKS = { production: [
     ["production_ch4_pct_check",     r => r.ch4_pct == null || (r.ch4_pct >= 0 && r.ch4_pct <= 100)],
@@ -454,6 +512,7 @@
         const a = DB.alerts.find(x => x.id === args.p_id);
         if (!a) return { data: null, error: { message: "alert not found" } };
         a.acknowledged_at = at; a.acknowledged_by = ME; a.updated_at = at;
+        a.ack_comment = (args.p_comment || "").trim() || null;
         return { data: null, error: null };
       }
       if (fn === "replace_feeding") {

@@ -6,7 +6,7 @@
 #
 #  1. FRESH   : shim → db/schema.sql → db/seed.sql (×2, idempotent) → tests
 #  2. UPGRADE : shim → schema/seed/0006 as of $BASELINE (reproduces the old
-#               duplicate-parameter bug) → 0007, 0009, 0010, 0011 (each ×2, idempotent;
+#               duplicate-parameter bug) → 0007, 0009, 0010, 0011, 0012 (each ×2, idempotent;
 #               0010 also meets duplicated/impossible legacy production rows)
 #  3. Proves FRESH and UPGRADE end with the same schema (fingerprint diff).
 #
@@ -47,6 +47,7 @@ psqlx -d fresh -At -f tests/sql/fingerprint.sql > "$W/fresh.fp"
 psqlx -d fresh -f tests/sql/test_phase7.sql
 psqlx -d fresh -f tests/sql/test_phase10.sql
 psqlx -d fresh -f tests/sql/test_phase11.sql
+psqlx -d fresh -f tests/sql/test_phase12.sql
 
 echo "▶ UPGRADE path from $BASELINE"
 psqlx -d postgres -c "create database upgraded"
@@ -96,6 +97,11 @@ psqlx -d upgraded -f db/migrations/0011_trends_daily_readings.sql >/dev/null
 ok "migration 0011 applied twice (idempotent)"
 [ "$(psqlx -d upgraded -At -c "select trend_delta || '/' || trend_days from parameters where tenant_id is null and code = 'fos_tac'")" = "0.05/14" ] \
   && ok "0011: FOS/TAC trend rule (+0.05 / 14 d) set on the global parameter"
+psqlx -d upgraded -f db/migrations/0012_shift_incidents_maintenance.sql >/dev/null
+psqlx -d upgraded -f db/migrations/0012_shift_incidents_maintenance.sql >/dev/null
+ok "migration 0012 applied twice (idempotent)"
+[ "$(psqlx -d upgraded -At -c "select count(*) from alerts where ack_comment is not null")" = "0" ] \
+  && ok "0012: existing alarms keep their state (ack_comment empty)"
 [ "$(psqlx -d upgraded -At -c "select red_class from feedstocks where category='manure' limit 1")" = "manure" ] \
   && ok "RED III class back-filled from category on upgrade"
 [ "$(psqlx -d upgraded -At -c "select count(*) - count(distinct code) from parameters where tenant_id is null")" = 0 ] \
@@ -107,7 +113,7 @@ ok "migration 0011 applied twice (idempotent)"
 psqlx -d upgraded -At -f tests/sql/fingerprint.sql > "$W/upgraded.fp"
 
 echo "▶ schema.sql mirrors the migrations verbatim"
-for ph in 9:0009_red3_sustainability 10:0010_production_integrity_roles 11:0011_trends_daily_readings; do
+for ph in 9:0009_red3_sustainability 10:0010_production_integrity_roles 11:0011_trends_daily_readings 12:0012_shift_incidents_maintenance; do
   n="${ph%%:*}"; f="db/migrations/${ph#*:}.sql"
   blk() { sed -n "/^-- >>> BEGIN PHASE$n OBJECTS/,/^-- <<< END PHASE$n OBJECTS/p" "$1"; }
   if [ -n "$(blk "$f")" ] && diff <(blk db/schema.sql) <(blk "$f") >/dev/null; then ok "PHASE$n block identical"

@@ -44,6 +44,7 @@ const KIND_EL: Record<string, string> = {
   production: "Παραγωγή",
   feeding: "Τροφοδοσία",
   digestate: "Χώνευμα",
+  incident: "Συμβάν",
 };
 
 export function escapeHtml(s: unknown): string {

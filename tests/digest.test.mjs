@@ -66,3 +66,9 @@ test("Greek subject with correct plurals", () => {
   assert.ok(d[0].text.includes("https://app.example"));
   assert.ok(d[0].html.includes('href="https://app.example"'));
 });
+
+test("incident alarms (migration 0012) are labelled «Συμβάν»", () => {
+  const d = buildDigests([alert("i1", A, "critical", "2026-11-22T03:10:00Z", { kind: "incident", metric: "Συμβάν: ΣΗΘ trip" })],
+    [{ tenant_id: A, email: "ops@a.gr", min_severity: "warning", enabled: true }]);
+  assert.match(d[0].html, /Συμβάν</);
+});

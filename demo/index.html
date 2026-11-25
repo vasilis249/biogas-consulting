@@ -150,6 +150,31 @@
   .spark{display:inline-block;vertical-align:middle;overflow:visible}
   .spark-empty{color:var(--faint)}
   .trend{font-size:12px;font-weight:600;color:var(--muted);margin-left:4px;white-space:nowrap}
+  .two-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:16px}
+  .pad{padding:16px 18px}
+  .task-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .task-list li{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;background:var(--surface-2)}
+  .shift-log{display:flex;flex-direction:column;gap:0}
+  .shift-entry{padding:12px 18px;border-bottom:1px solid var(--border)} .shift-entry header{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .pre{white-space:pre-wrap;font-size:14px}
+  .contact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:10px}
+  .contact{display:flex;flex-direction:column;gap:8px;border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;background:var(--surface-2);position:relative;min-width:0}
+  .contact.sos{border-color:#ecc9c4;background:#fdf3f1}
+  .contact .who{padding-right:76px;min-height:22px;text-align:left}
+  .contact .call{min-height:52px;font-size:18px;justify-content:center;text-decoration:none;width:100%;overflow:hidden;text-overflow:ellipsis}
+  .contact-act{position:absolute;top:6px;right:6px;display:flex;gap:2px}
+  .btn.danger-solid{background:var(--high);border-color:var(--high);color:#fff}
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:12px;align-items:start}
+  .em-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px}
+  .em-card summary{cursor:pointer;min-height:36px;display:flex;align-items:center;gap:8px;justify-content:space-between;font-size:15.5px}
+  .em-card ol{margin:8px 0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-size:14.5px}
+  .meter{display:inline-block;width:90px;height:8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);vertical-align:middle;margin-right:6px;overflow:hidden}
+  .meter span{display:block;height:100%;border-radius:999px}
+  .uc-maint{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap} .uc-maint a{text-decoration:none}
+  .uc-tasks{margin-top:8px;color:var(--muted)}
+  .nav-sos{color:var(--high) !important;font-weight:700}
+  .ack-info{margin-top:4px;white-space:normal;max-width:240px}
+  @media print{ .em-card{break-inside:avoid;border-color:#999} .contact .call{border:1px solid #999;color:#000;background:#fff} }
   .pl-state{margin:0 0 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
   .pl-state>.small{flex-basis:100%}
   .chip{display:inline-flex;gap:4px;align-items:center;font-size:13px;padding:3px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface-2)}
@@ -240,6 +265,10 @@
     <button class="nav-item" data-view="massbalance"><span class="ic">⚖</span> Ισοζύγιο</button>
     <button class="nav-item" data-view="red3"><span class="ic">🌱</span> Αειφορία</button>
     <button class="nav-item" data-view="alerts"><span class="ic">🔔</span> Ειδοποιήσεις<span class="nav-badge hidden" id="alert-badge"></span></button>
+    <button class="nav-item" data-view="shift"><span class="ic">📋</span> Βάρδια</button>
+    <button class="nav-item" data-view="incidents"><span class="ic">⚠</span> Συμβάντα</button>
+    <button class="nav-item" data-view="maintenance"><span class="ic">🔧</span> Συντήρηση ΣΗΘ</button>
+    <button class="nav-item nav-sos" data-view="emergency"><span class="ic">🆘</span> Έκτακτα</button>
     <button class="nav-item" data-view="reports"><span class="ic">📊</span> Reports</button>
     <div class="nav-sep"></div>
     <div class="small muted" style="padding:4px 12px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.05em">Διαχείριση</div>
@@ -632,6 +661,15 @@
         commissioning_date: "2024-02-15", rated_thermal_input_mw: 2.6, red_case: 1, digestate_storage: "open", red_product: "electricity", offgas_combustion: false, created_at: iso(dayAt(380)) },
     ],
     recipes: [], samples: [], analyses: [], production: [], feeding: [], feeding_notes: [], digestate: [], files: [], audit_log: [], alerts: [],
+    shift_log: [], shift_tasks: [], incidents: [], maintenance_plans: [], maintenance_log: [],
+    // global emergency-card templates: injected by demo/build.js from db/seed.sql (single source of truth)
+    emergency_cards: ([{"scenario":"gas_leak","title":"Διαρροή βιοαερίου","steps":"Απομάκρυνε όλους από την περιοχή, αντίθετα από τον άνεμο.\nΚαμία πηγή ανάφλεξης μέσα στη ζώνη ATEX: όχι κάπνισμα, όχι διακόπτες, όχι μη αντιεκρηκτικά κινητά/φακοί.\nΜην μπεις σε φρεάτιο, αντλιοστάσιο ή κλειστό χώρο: κίνδυνος H₂S και ασφυξίας. Μόνο με ανιχνευτή αερίων και δεύτερο άτομο έξω.\nΑν γίνεται με ασφάλεια από εκτός ζώνης: σταμάτα την τροφοδοσία και κλείσε τη βάνα απομόνωσης ή στείλε το αέριο στον πυρσό, όπως ορίζει το σχέδιο της μονάδας.\nΜεγάλη διαρροή ή μυρωδιά σε κτίρια → 112 / Πυροσβεστική 199.\nΕνημέρωσε τον υπεύθυνο μονάδας και κατέγραψε το συμβάν.","sort_order":10},{"scenario":"overpressure","title":"Υπερπίεση / άνοιξε η βαλβίδα ασφαλείας","steps":"Έλεγξε πίεση αερίου και στάθμη αεριοθαλάμου στο SCADA.\nΒεβαιώσου ότι ο πυρσός λειτουργεί· αν όχι, εκκίνησέ τον σύμφωνα με τις οδηγίες.\nΈλεγξε αν η ΣΗΘ λειτουργεί — σε trip το αέριο δεν καταναλώνεται.\nΜείωσε ή σταμάτα την τροφοδοσία μέχρι να πέσει η πίεση.\nΜην πλησιάζεις τη βαλβίδα όσο εκτονώνει (βιοαέριο, H₂S).\nΜετά: έλεγχος της βαλβίδας (στάθμη υγρού/σφράγιση) και καταγραφή συμβάντος.","sort_order":20},{"scenario":"blackout","title":"Μπλακ άουτ (διακοπή ρεύματος)","steps":"Έλεγξε ότι ξεκίνησαν ηλεκτροπαραγωγό ζεύγος / UPS για SCADA και πυρσό.\nΕπιβεβαίωσε ότι ο πυρσός καίει: χωρίς ΣΗΘ όλο το αέριο πρέπει να πάει εκεί.\nΣταμάτα την τροφοδοσία· οι αναδευτήρες έχουν σταματήσει.\nΚάλεσε ΔΕΔΔΗΕ (βλάβες) για εκτίμηση χρόνου αποκατάστασης.\nΜε την επαναφορά: θέρμανση → αναδευτήρες → ΣΗΘ με τη σειρά του κατασκευαστή· έλεγχος για αφρό και θερμοκρασία χωνευτών.\nΚατέγραψε τις ώρες εκτός λειτουργίας (παραγωγή και συμβάν).","sort_order":30},{"scenario":"fire","title":"Πυρκαγιά","steps":"Κάλεσε αμέσως 112 / Πυροσβεστική 199.\nΠάτησε το κουμπί έκτακτης διακοπής (emergency stop), αν είναι ασφαλές.\nΑπομάκρυνε το προσωπικό στο σημείο συγκέντρωσης και κάνε καταμέτρηση.\nΜην επιχειρήσεις να σβήσεις φλόγα αερίου πριν κοπεί η παροχή αερίου.\nΥποδέξου την Πυροσβεστική με το σχέδιο της μονάδας (αεριοθάλαμος, βάνες, δεξαμενές, ζώνες ATEX).","sort_order":40},{"scenario":"foam","title":"Αφρισμός χωνευτή","steps":"Μείωσε ή σταμάτα την τροφοδοσία, πρώτα τα εύπεπτα υποστρώματα.\nΈλεγξε αν ο αφρός φτάνει στις σωληνώσεις αερίου ή στη βαλβίδα ασφαλείας.\nΡύθμισε την ανάδευση σύμφωνα με τις οδηγίες του κατασκευαστή.\nΧρησιμοποίησε μόνο αντιαφριστικό εγκεκριμένο για τη μονάδα.\nΠάρε δείγμα για FOS/TAC και VFA.","sort_order":50},{"scenario":"frost","title":"Παγετός","steps":"Έλεγχος θέρμανσης και θερμοκρασίας χωνευτών κάθε 2–3 ώρες.\nΈλεγξε παγίδες συμπυκνωμάτων και σωληνώσεις νερού/αερίου για πάγωμα.\nΒεβαιώσου ότι πυρσός και βαλβίδες ασφαλείας δεν έχουν παγώσει.\nΚράτα έτοιμο τον εφεδρικό λέβητα αν σταματήσει η ΣΗΘ.","sort_order":60},{"scenario":"chp_trip","title":"Trip ΣΗΘ (στάση μηχανής)","steps":"Δες και φωτογράφισε τον κωδικό σφάλματος στο χειριστήριο της μηχανής.\nΒεβαιώσου ότι το αέριο πάει στον πυρσό (όχι υπερπίεση).\nΕπανεκκίνηση μόνο αν την επιτρέπει ο κατασκευαστής για τον συγκεκριμένο κωδικό — μία προσπάθεια.\nΑν ξαναπέσει: κάλεσε το service ΣΗΘ.\nΚατέγραψε ώρα στάσης/επανεκκίνησης στο συμβάν και στις ώρες ΣΗΘ της παραγωγής.","sort_order":70},{"scenario":"injury","title":"Τραυματισμός / δηλητηρίαση","steps":"Ασφάλισε την περιοχή (στάση μηχανημάτων, έλεγχος αερίων) πριν πλησιάσεις.\nΚάλεσε ΕΚΑΒ 166 ή 112.\nΠρώτες βοήθειες μόνο αν είσαι εκπαιδευμένος.\nΥποψία H₂S ή ασφυξίας σε κλειστό χώρο: ΜΗΝ μπεις χωρίς αναπνευστική προστασία — κάλεσε βοήθεια.\nΕνημέρωσε τον υπεύθυνο και κατέγραψε το συμβάν.","sort_order":80}]).map((c, i) => ({ id: "ec-" + c.scenario, tenant_id: null, created_at: iso(dayAt(400)), ...c })),
+    contacts: [
+      ["Ευρωπαϊκός αριθμός έκτακτης ανάγκης", "Έκτακτη ανάγκη", "112", true, 10], ["Πυροσβεστική", "Έκτακτη ανάγκη", "199", true, 20],
+      ["ΕΚΑΒ", "Έκτακτη ανάγκη", "166", true, 30], ["ΔΕΔΔΗΕ — βλάβες", "Δίκτυο ρεύματος", "11500", false, 40],
+      ["Service ΣΗΘ (εφημερία)", "Κατασκευαστής μηχανής", "+30 690 000 0001", false, 50],
+      ["Υπεύθυνος μονάδας", "Μηχανικός λειτουργίας", "+30 690 000 0002", false, 60],
+    ].map((c, i) => ({ id: "ct" + i, tenant_id: T, name: c[0], role: c[1], phone: c[2], phone2: null, notes: null, is_emergency: c[3], sort_order: c[4], created_at: iso(dayAt(300)) })),
     alert_recipients: [
       { id: "ar1", tenant_id: T, email: "demo@biogas.gr", min_severity: "warning", enabled: true, created_at: iso(dayAt(60)) },
       { id: "ar2", tenant_id: T, email: "owner@biogas.gr", min_severity: "critical", enabled: true, created_at: iso(dayAt(60)) },
@@ -669,7 +707,7 @@
     const reopen = ex.resolved_at != null, escalate = ex.severity === "warning" && sev === "critical";
     Object.assign(ex, { unit_id: unit, metric, value, message: msg, severity: sev, updated_at: at });
     if (reopen) ex.created_at = at;
-    if (reopen || escalate) { ex.acknowledged_at = null; ex.acknowledged_by = null; ex.emailed_at = null; }
+    if (reopen || escalate) { ex.acknowledged_at = null; ex.acknowledged_by = null; ex.ack_comment = null; ex.emailed_at = null; }
     ex.resolved_at = null;
   }
   function clear(key, at) {
@@ -743,6 +781,24 @@
         `Το μεθάνιο πέφτει 3 ημέρες συνεχόμενα: ${num6(v[3])} → ${num6(v[0])}% (−${num6(v[3] - v[0])} μονάδες) — πιθανή αρχή οξίνισης · ${uname(unit)} · ${ddmmyyyy(r.log_date)}`, kf, at);
     else clear(kf, at);
   }
+  // 0012: incident in progress (major/emergency) → alarm; closed → resolved
+  const INC_LABEL = { chp_trip: "ΣΗΘ trip", gas_leak: "διαρροή αερίου", overpressure: "υπερπίεση", blackout: "μπλακ άουτ", foam: "αφρισμός",
+    fire: "πυρκαγιά", injury: "τραυματισμός", frost: "παγετός", spill: "διαρροή υγρών" };
+  const athens = d => { const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Athens", day: "2-digit", month: "2-digit",
+    year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(d)).map(x => [x.type, x.value]));
+    return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`; };
+  function evalIncident(i, at) {
+    const key = "incident:" + i.id;
+    if (!DB.incidents.includes(i) || i.ended_at || i.severity === "minor") return clear(key, at);
+    raise(i.tenant_id, i.unit_id || null, "incident", INC_LABEL[i.kind] ? "Συμβάν: " + INC_LABEL[i.kind] : "Συμβάν", null,
+      i.severity === "emergency" ? "critical" : "warning",
+      `${i.severity === "emergency" ? "ΕΚΤΑΚΤΗ ΑΝΑΓΚΗ" : "Σοβαρό συμβάν"} ΣΕ ΕΞΕΛΙΞΗ: ${i.title} · ${i.unit_id ? uname(i.unit_id) : "μονάδα"} · από ${athens(i.started_at)}`, key, at);
+  }
+  function maintenanceStatus() {
+    return DB.maintenance_plans.map(mp => { const h = DB.production.filter(p => p.unit_id === mp.unit_id && p.tenant_id === mp.tenant_id
+        && (!mp.last_done_on || p.log_date > mp.last_done_on)).reduce((s, p) => s + (Number(p.chp_hours) || 0), 0);
+      return { ...mp, hours_since: Math.round(h * 10) / 10, hours_left: Math.round((mp.interval_hours - h) * 10) / 10 }; });
+  }
   function feedingDaily() {
     const g = {};
     DB.feeding.forEach(f => {
@@ -793,13 +849,19 @@
     } else if (table === "digestate") {
       each(newRows, r => evalDigestate(r.tenant_id, r.recipient, String(r.log_date).slice(0, 4), at));
       each(oldRows, r => evalDigestate(r.tenant_id, r.recipient, String(r.log_date).slice(0, 4), at));
+    } else if (table === "incidents") {
+      each(newRows, r => evalIncident(r, at)); each(oldRows, r => evalIncident(r, at));
+    } else if (table === "maintenance_log") {
+      each(newRows.concat(oldRows), r => { const mp = DB.maintenance_plans.find(x => x.id === r.plan_id);
+        if (mp) mp.last_done_on = DB.maintenance_log.filter(x => x.plan_id === mp.id).map(x => x.done_on).sort().pop() || null; });
     } else if (table === "units") {
       each(newRows, r => evalFeeding(r.tenant_id, r.id, at));
     } else if (table === "feedstocks") {
       each(newRows, f => [...new Set(DB.feeding.filter(x => x.feedstock_id === f.id).map(x => x.tenant_id + "|" + x.unit_id))]
         .forEach(k => { const [t, u] = k.split("|"); evalFeeding(t, u, at); }));
     }
-    const AUDITED = ["units", "parameters", "samples", "analyses", "invoices", "profiles", "files", "production", "feedstocks", "recipes", "feeding", "feeding_notes", "digestate", "alert_recipients"];
+    const AUDITED = ["units", "parameters", "samples", "analyses", "invoices", "profiles", "files", "production", "feedstocks", "recipes", "feeding", "feeding_notes", "digestate", "alert_recipients",
+      "shift_log", "shift_tasks", "incidents", "contacts", "emergency_cards", "maintenance_plans", "maintenance_log"];
     const heartbeatOnly = table === "profiles" && oldRows.length && newRows.length && newRows.every((r, i) => {
       const o = { ...oldRows[i] }, n = { ...r }; delete o.last_seen; delete n.last_seen; return JSON.stringify(o) === JSON.stringify(n); });
     if (AUDITED.includes(table) && !heartbeatOnly) {
@@ -907,6 +969,31 @@
   dig(dayAt(20), "un2", 150, "sale", "Λιπασματοποιία Θεσσαλίας", null, 5.1, 2.2, 5.6);
   dig(dayAt(6), "un2", 330, "field", SYN, 18, 5.1, 2.2, 5.6);      // pushes this field over 170 kg N/ha
 
+  // shift & safety (0012): a past CHP trip, hand-over notes, open items, CHP service plans
+  ev(dayAt(9, 3, 10), () => insertRows("incidents", [{ id: "inc1", tenant_id: T, unit_id: "un1", kind: "chp_trip", severity: "major",
+    title: "Trip ΣΗΘ — υψηλή θερμοκρασία νερού ψύξης", started_at: iso(dayAt(9, 3, 10)), ended_at: null,
+    description: "Η μηχανή σταμάτησε με κωδικό υψηλής θερμοκρασίας ψύξης. Ο πυρσός άναψε αυτόματα.", actions: null,
+    notified: "Υπεύθυνος μονάδας (τηλ. 03:20)", photo_path: null, created_by: OP, created_at: iso(dayAt(9, 3, 15)) }], dayAt(9, 3, 15)));
+  ev(dayAt(9, 4, 25), () => { const i = DB.incidents.find(x => x.id === "inc1"), old = { ...i };
+    Object.assign(i, { ended_at: iso(dayAt(9, 4, 25)), actions: "Καθαρισμός ψυγείου (φύλλα), έλεγχος στάθμης ψυκτικού, επανεκκίνηση 04:25." });
+    currentUser = OP; afterWrite("incidents", [old], [i], iso(dayAt(9, 4, 25))); });
+  [[2, "night", "Ήσυχη νύχτα. Χ2: CH₄ 50,4% στην ένδειξη των 05:00 — να το δει η πρωινή."],
+   [1, "morning", "Χ2: FOS/TAC 0,55 από το εργαστήριο. Μείωσα τα εύπεπτα στη σημερινή τροφοδοσία. Χ1 κανονικά."],
+   [1, "afternoon", "Ήρθε φορτίο τροφίμων + πουλερικών, μπήκε όλο στον Χ2 (OLR 4,35). Προσοχή αύριο."]].forEach(([d, sh, body], k) => {
+    const at = dayAt(d, sh === "night" ? 5 : sh === "morning" ? 13 : 21, 45);
+    ev(at, () => insertRows("shift_log", [{ id: "sl" + k, tenant_id: T, shift_date: dateStr(sh === "night" ? d + 1 : d), shift: sh, body, created_by: OP, created_at: iso(at) }], at));
+  });
+  ev(dayAt(1, 13, 40), () => insertRows("shift_tasks", [
+    { id: "st1", tenant_id: T, unit_id: "un2", title: "FOS/TAC Χ2 κάθε 2 ημέρες μέχρι να πέσει κάτω από 0,4", due_date: null, created_by: OP, created_at: iso(dayAt(1, 13, 40)), done_at: null, done_by: null, done_note: null },
+    { id: "st2", tenant_id: T, unit_id: "un1", title: "Έλεγχος ψυγείου ΣΗΘ (φύλλα) μετά το trip", due_date: dateStr(0), created_by: OP, created_at: iso(dayAt(1, 13, 41)), done_at: null, done_by: null, done_note: null }], dayAt(1, 13, 41)));
+  ev(dayAt(41, 9), () => insertRows("maintenance_plans", [
+    { id: "mp1", tenant_id: T, unit_id: "un1", task: "Αλλαγή λαδιών & φίλτρου λαδιού", interval_hours: 2000, last_done_on: null, notes: null, created_at: iso(dayAt(41, 9)) },
+    { id: "mp2", tenant_id: T, unit_id: "un1", task: "Μπουζί", interval_hours: 4000, last_done_on: null, notes: null, created_at: iso(dayAt(41, 9)) },
+    { id: "mp3", tenant_id: T, unit_id: "un2", task: "Αλλαγή λαδιών & φίλτρου λαδιού", interval_hours: 1000, last_done_on: null, notes: "Μικρότερο διάστημα λόγω H₂S", created_at: iso(dayAt(41, 9)) },
+    { id: "mp4", tenant_id: T, unit_id: "un2", task: "Φίλτρο ενεργού άνθρακα (αποθείωση)", interval_hours: 900, last_done_on: null, notes: null, created_at: iso(dayAt(41, 9)) }], dayAt(41, 9), ME));
+  ev(dayAt(12, 15), () => insertRows("maintenance_log", [{ id: "ml1", tenant_id: T, plan_id: "mp1", done_on: dateStr(12), engine_hours: 41250,
+    notes: "Προγραμματισμένη στάση 4,5 h", created_by: OP, created_at: iso(dayAt(12, 15)) }], dayAt(12, 15)));
+
   events.sort((a, b) => a.at - b.at).forEach(e => e.run());
   // the e-mail cron has already processed alarms older than ~10 minutes; one alarm was acknowledged by the shift operator
   DB.alerts.forEach(a => { if (!a.resolved_at && !a.acknowledged_at && (NOW - new Date(a.updated_at)) > 10 * 60000) a.emailed_at = iso(new Date(new Date(a.updated_at).getTime() + 4 * 60000)); });
@@ -923,7 +1010,7 @@
       sample: (() => { const s = DB.samples.find(x => x.id === r.sample_id); return s ? { ...s, unit: U(s.unit_id) || null } : null; })() }),
     audit_log: r => ({ ...r, actor: DB.profiles.find(p => p.id === r.user_id) || null }),
   };
-  const VIEWS = { feeding_daily: feedingDaily };
+  const VIEWS = { feeding_daily: feedingDaily, maintenance_status: maintenanceStatus };
   // Constraints of migration 0010 (production): CHECK ranges + unique (unit_id, log_date).
   const CHECKS = { production: [
     ["production_ch4_pct_check",     r => r.ch4_pct == null || (r.ch4_pct >= 0 && r.ch4_pct <= 100)],
@@ -1013,6 +1100,7 @@
         const a = DB.alerts.find(x => x.id === args.p_id);
         if (!a) return { data: null, error: { message: "alert not found" } };
         a.acknowledged_at = at; a.acknowledged_by = ME; a.updated_at = at;
+        a.ack_comment = (args.p_comment || "").trim() || null;
         return { data: null, error: null };
       }
       if (fn === "replace_feeding") {
@@ -1242,6 +1330,10 @@ function go(view){
   else if(view==="massbalance") renderMassBalance();
   else if(view==="red3") renderRed3();
   else if(view==="alerts") renderAlerts();
+  else if(view==="shift") renderShift();
+  else if(view==="incidents") renderIncidents();
+  else if(view==="maintenance") renderMaintenance();
+  else if(view==="emergency") renderEmergency();
   else if(view==="feedstocks") renderFeedstocks();
   else if(view==="reports") renderReports();
   else if(view==="units") renderUnits();
@@ -1327,13 +1419,16 @@ async function renderDashboard(){
     <div class="stats" id="dash-stats"></div>
     <div class="today-grid" id="dash-units"><div class="empty">Φόρτωση…</div></div>
     <div id="dash-plant"></div>`;
-  const [prodQ, feedQ, labQ, alertQ] = await Promise.all([
+  const [prodQ, feedQ, labQ, alertQ, mtQ, tkQ] = await Promise.all([
     sb.from("production").select("*").eq("tenant_id",T).gte("log_date",since).order("log_date",{ascending:true}).limit(5000),
     sb.from("feeding_daily").select("*").eq("tenant_id",T).gte("feed_date",since).order("feed_date",{ascending:true}).limit(5000),
     sb.from("analyses").select("value,measured_at,created_at,parameter:parameters(code,label_el,ideal_min,ideal_max,default_unit),sample:samples(unit_id)")
       .eq("tenant_id",T).gte("created_at",since).order("created_at",{ascending:true}).limit(5000),
     sb.from("alerts").select("*,unit:units(name)").eq("tenant_id",T).is("resolved_at",null).order("updated_at",{ascending:false}).limit(200),
+    sb.from("maintenance_status").select("*").eq("tenant_id",T).limit(500),
+    sb.from("shift_tasks").select("id,title,unit_id,due_date").eq("tenant_id",T).is("done_at",null).limit(200),
   ]);
+  const mt=mtQ.data||[], tasks=tkQ.data||[];
   if(!$("#dash-units")) return;                       // navigated away meanwhile
   const prod=prodQ.data||[], feed=feedQ.data||[], lab=labQ.data||[], act=alertQ.data||[];
   const actCrit=act.filter(a=>a.severity==="critical").length;
@@ -1377,6 +1472,8 @@ async function renderDashboard(){
     const missing=[];
     if(!P.some(r=>r.log_date===yesterday)) missing.push(`Δεν καταχωρίστηκε παραγωγή για χθες (${fmtDate(yesterday)}).`);
     if(new Date().getHours()>=10 && !F.some(d=>d.feed_date===today)) missing.push("Δεν έχει καταχωριστεί η σημερινή τροφοδοσία.");
+    const due=mt.filter(m=>m.unit_id===u.id && maintState(m)!=="ok").sort((a,b)=>a.hours_left-b.hours_left);
+    const myTasks=tasks.filter(t=>t.unit_id===u.id);
     const issues=groups.map(g=>`<details class="issue ${g.sev}"><summary>${g.sev==="critical"?"⛔":"⚠"} <b>${esc(g.title)}</b> <span class="muted">· ${g.items.length} ${g.items.length===1?"ένδειξη":"ενδείξεις"}</span></summary>`
       + (g.hint?`<div class="small" style="margin:6px 0">${esc(g.hint)}</div>`:"")
       + `<ul>${g.items.map(a=>`<li>${sevBadge(a.severity)} ${esc(a.message||a.metric||"")}</li>`).join("")}</ul></details>`).join("");
@@ -1385,6 +1482,8 @@ async function renderDashboard(){
       ${groups.length?`<div class="uc-diag">${groups.slice(0,2).map(g=>`<span class="badge ${g.sev==="critical"?"high":"warnb"}">${esc(g.title)}</span>`).join(" ")}</div>`:""}
       <div class="uc-kpis">${kpis}</div>
       ${missing.length?`<div class="hint warn small" style="margin:10px 0 0">${missing.map(esc).join("<br>")}</div>`:""}
+      ${due.length?`<div class="uc-maint small">${due.map(m=>`<a href="#" onclick="go('maintenance');return false" class="badge ${maintState(m)==="crit"?"high":"warnb"}">🔧 ${esc(m.task)}: ${m.hours_left<=0?"οφείλεται (+"+fmtNum(-m.hours_left)+" h)":"σε "+fmtNum(m.hours_left)+" h"}</a>`).join(" ")}</div>`:""}
+      ${myTasks.length?`<div class="uc-tasks small"><b>📌 Εκκρεμότητες:</b> ${myTasks.map(t=>esc(t.title)).join(" · ")}</div>`:""}
       ${labRows||dailyRows?`<table class="uc-lab"><tbody>${labRows}${dailyRows}</tbody></table><div class="small muted" style="margin-top:2px">Διαγράμματα: τελευταίες 8 εβδομάδες · πράσινη ζώνη = ιδανικό εύρος</div>`:""}
       <div class="uc-issues">${issues||`<div class="small" style="color:var(--ok)">✓ Καμία ενεργή ειδοποίηση</div>`}</div>
     </section>`;
@@ -3004,6 +3103,7 @@ async function renderAlerts(){
     sb.from("alerts").select("id",{count:"exact",head:true}).eq("tenant_id",T).gte("resolved_at",weekAgo)]);
   const body=$("#al-body"); if(!body) return;
   if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  await loadPeople();
   const o=openAll||[];
   $("#al-stats").innerHTML=
     statTile("Κρίσιμες ενεργές", o.filter(a=>a.severity==="critical").length, o.some(a=>a.severity==="critical")?"var(--high)":"var(--ok)")+
@@ -3014,19 +3114,29 @@ async function renderAlerts(){
     ? ((b.severity==="critical")-(a.severity==="critical")) || ((!b.acknowledged_at)-(!a.acknowledged_at)) || String(b.updated_at).localeCompare(String(a.updated_at))
     : String(b.updated_at).localeCompare(String(a.updated_at)));
   body.innerHTML = list.length ? table(
-    ["Χρόνος","Σοβαρότητα","Μονάδα","Πηγή","Μήνυμα","Κατάσταση",""],
-    list.map(a=>[`<span class="small">${fmtDateTime(a.updated_at)}</span>`, sevBadge(a.severity), esc(a.unit?.name||"—"),
+    ["Από","Σοβαρότητα","Μονάδα","Πηγή","Μήνυμα","Κατάσταση",""],
+    list.map(a=>[`<span class="small" title="Τελευταία ενημέρωση ${fmtDateTime(a.updated_at)}">${fmtDateTime(a.created_at)}</span>${a.resolved_at?"":`<div class="small muted">${fmtDuration(Date.now()-new Date(a.created_at))}</div>`}`,
+      sevBadge(a.severity), esc(a.unit?.name||"—"),
       esc(ALERT_KIND[a.kind]||a.kind), `<div class="cell-wrap">${esc(a.message||a.metric||"")}</div>`,
-      alertStateBadge(a)+(a.emailed_at?` <span title="Στάλθηκε email ${fmtDateTime(a.emailed_at)}">✉</span>`:""),
+      alertStateBadge(a)+(a.emailed_at?` <span title="Στάλθηκε email ${fmtDateTime(a.emailed_at)}">✉</span>`:"")
+        +(a.acknowledged_at?`<div class="small muted ack-info">✓ ${esc(personName(a.acknowledged_by))} · ${fmtDateTime(a.acknowledged_at)}${a.ack_comment?`<br>«${esc(a.ack_comment)}»`:""}</div>`:""),
       (!a.resolved_at && !a.acknowledged_at && canWrite()) ? `<button class="btn sm" data-ack="${a.id}">✓ Επιβεβαίωση</button>` : ""])
   ) : `<div class="empty">${AF==="open"?"Καμία ενεργή ειδοποίηση — όλοι οι δείκτες εντός ορίων ✓":"Δεν υπάρχει ιστορικό ειδοποιήσεων."}</div>`;
-  body.querySelectorAll("[data-ack]").forEach(b=>b.onclick=async()=>{
-    b.disabled=true;
-    const { error:e } = await sb.rpc("acknowledge_alert",{p_id:b.dataset.ack});
-    if(e){ b.disabled=false; return toast("Σφάλμα: "+e.message); }
-    toast("Επιβεβαιώθηκε"); refreshAlertBadge(); renderAlerts();
-  });
+  body.querySelectorAll("[data-ack]").forEach(b=>b.onclick=()=>ackForm(list.find(a=>a.id===b.dataset.ack)));
   if(isAdmin()) loadRecipients();
+}
+// Acknowledge = «το είδα και το χειρίζομαι»: who, when and what is being done (operator review #8).
+function ackForm(a){
+  const body=el("div");
+  body.innerHTML=`<div class="hint ${a.severity==="critical"?"warn":"info"}" style="margin-bottom:12px">${sevBadge(a.severity)} ${esc(a.message||a.metric||"")}
+      <div class="small muted" style="margin-top:4px">Ενεργός από ${fmtDateTime(a.created_at)} (${fmtDuration(Date.now()-new Date(a.created_at))})</div></div>
+    <div class="field"><label>Σχόλιο — τι κάνεις / ποιον ενημέρωσες</label><textarea class="input" id="ack-c" rows="3" maxlength="500" placeholder="π.χ. Ενημερώθηκε ο μηχανικός, μείωσα τα εύπεπτα, νέο FOS/TAC αύριο"></textarea></div>
+    <p class="small muted" style="margin:0">Η επιβεβαίωση σταματά τις υπενθυμίσεις email. Ο συναγερμός παραμένει ενεργός μέχρι να επανέλθει η τιμή.</p>`;
+  modal("Επιβεβαίωση συναγερμού", body, async close=>{
+    const { error } = await sb.rpc("acknowledge_alert",{p_id:a.id, p_comment:$("#ack-c").value.trim()||null});
+    if(error) return toast("Σφάλμα: "+error.message);
+    close(); toast("Επιβεβαιώθηκε"); refreshAlertBadge(); renderAlerts();
+  }, "✓ Επιβεβαίωση");
 }
 async function loadRecipients(){
   const box=$("#al-recips"); if(!box) return;
@@ -3058,6 +3168,353 @@ async function loadRecipients(){
     if(e) return toast("Σφάλμα: "+e.message); toast("Αφαιρέθηκε"); loadRecipients(); });
 }
 
+
+/* ============================ Shift, incidents, emergency, maintenance (Phase 12) ============================
+   Operator review Top-10 #2, #8, #10: hand-over notes with an automatic summary of the shift, open
+   items that carry over until done, an incident log (alarm while in progress, printable report),
+   a phone list and one-page emergency cards, CHP service intervals by running hours. */
+const SHIFT = {morning:"Πρωινή (06–14)", afternoon:"Απογευματινή (14–22)", night:"Νυχτερινή (22–06)"};
+const INC_KIND = {chp_trip:"Trip ΣΗΘ", gas_leak:"Διαρροή βιοαερίου", overpressure:"Υπερπίεση / βαλβίδα ασφαλείας", blackout:"Μπλακ άουτ",
+  foam:"Αφρισμός χωνευτή", fire:"Πυρκαγιά", injury:"Τραυματισμός / δηλητηρίαση", frost:"Παγετός", spill:"Διαρροή υγρών / χωνεύματος", other:"Άλλο"};
+const INC_SEV = {minor:"Μικρό", major:"Σοβαρό", emergency:"Έκτακτη ανάγκη"};
+const incSevBadge = s => s==="emergency" ? `<span class="badge high">⛔ ${INC_SEV[s]}</span>` : s==="major" ? `<span class="badge warnb">⚠ ${INC_SEV[s]}</span>` : `<span class="badge st">${INC_SEV[s]||s}</span>`;
+// shift containing a moment: night 22:00–06:00 belongs to the date it started
+function shiftOf(d=new Date()){
+  const h=d.getHours(), x=new Date(d);
+  if(h>=6&&h<14) return {shift:"morning", date:localDate(x)};
+  if(h>=14&&h<22) return {shift:"afternoon", date:localDate(x)};
+  if(h<6) x.setDate(x.getDate()-1);
+  return {shift:"night", date:localDate(x)};
+}
+function shiftWindow(date, shift){
+  const [y,m,d]=date.split("-").map(Number), start=new Date(y,m-1,d,{morning:6,afternoon:14,night:22}[shift],0,0);
+  return {from:start, to:new Date(start.getTime()+8*3600e3)};
+}
+const toLocalInput = iso => { if(!iso) return ""; const d=new Date(iso); return `${localDate(d)}T${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+const fromLocalInput = v => v ? new Date(v).toISOString() : null;
+async function loadPeople(){
+  if(state.people && state.people._t===state.tenantId) return state.people;
+  const { data } = await sb.from("profiles").select("id,full_name,email").eq("tenant_id",state.tenantId).limit(500);
+  const m={_t:state.tenantId}; (data||[]).forEach(p=>m[p.id]=p.full_name||p.email); if(state.profile) m[state.profile.id]=m[state.profile.id]||state.profile.full_name||state.profile.email;
+  return state.people=m;
+}
+const personName = id => (state.people&&state.people[id]) || "—";
+function fmtDuration(ms){ if(ms==null||ms<0) return "—"; const m=Math.round(ms/60000); return m<60 ? `${m}′` : `${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")}′`; }
+
+// ---------------------------------------------------------------- Βάρδια --
+async function renderShift(){
+  const main=$("#main"), cur=shiftOf();
+  const S=state.shiftForm||(state.shiftForm={...cur, body:""});
+  main.innerHTML=`<div class="page-head"><div><h1 class="page-title">Βάρδια</h1>
+      <div class="sub">Παράδοση βάρδιας, εκκρεμότητες που μεταφέρονται μέχρι να κλείσουν, αυτόματη σύνοψη</div></div></div>
+    <div class="two-col">
+      <div class="panel"><h3>📝 Παράδοση βάρδιας</h3><div class="pad">
+        ${canWrite()?`<div class="row">
+          <div class="field"><label>Ημερομηνία</label><input class="input" id="sh-date" type="date" value="${S.date}"></div>
+          <div class="field"><label>Βάρδια</label><select class="input" id="sh-shift">${Object.entries(SHIFT).map(([k,l])=>`<option value="${k}"${S.shift===k?" selected":""}>${l}</option>`).join("")}</select></div></div>
+        <div id="sh-summary" class="hint info small"></div>
+        <div class="field"><label>Τι παραδίδεις (τι έγινε, τι προσέχει ο επόμενος)</label><textarea class="input" id="sh-body" rows="5" placeholder="π.χ. Χ2: έκοψα τα εύπεπτα, FOS/TAC αύριο το πρωί. ΣΗΘ: ψυγείο καθαρό.">${esc(S.body||"")}</textarea></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="sh-addsum" type="button">↧ Πρόσθεσε τη σύνοψη</button><div class="spacer"></div>
+          <button class="btn primary" id="sh-save">✔ Καταχώρηση παράδοσης</button></div>`
+        : `<div class="empty">Ο ρόλος viewer βλέπει μόνο το ημερολόγιο.</div>`}
+      </div></div>
+      <div class="panel"><h3 style="display:flex;justify-content:space-between;align-items:center"><span>📌 Εκκρεμότητες — τι προσέχεις</span><span class="badge st" id="sh-open-n"></span></h3>
+        <div class="pad">${canWrite()?`<div class="row" style="align-items:flex-end">
+          <div class="field" style="flex:3"><label>Νέα εκκρεμότητα</label><input class="input" id="tk-title" maxlength="300" placeholder="π.χ. FOS/TAC Χ2 κάθε 2 ημέρες"></div>
+          <div class="field"><label>Χωνευτής</label><select class="input" id="tk-unit"><option value="">—</option>${state.units.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join("")}</select></div>
+          <div class="field"><label>Έως</label><input class="input" id="tk-due" type="date"></div>
+          <div class="field" style="flex:0 0 auto;min-width:0"><button class="btn" id="tk-add">＋ Προσθήκη</button></div></div>`:""}
+          <div id="sh-tasks"><div class="empty">Φόρτωση…</div></div></div></div>
+    </div>
+    <div class="panel" style="margin-top:16px"><h3>Ημερολόγιο βάρδιας (14 ημέρες)</h3><div class="body" id="sh-log"><div class="empty">Φόρτωση…</div></div></div>`;
+  await loadPeople();
+  if(canWrite()){
+    const upd=()=>{ S.date=$("#sh-date").value||S.date; S.shift=$("#sh-shift").value; loadShiftSummary(); };
+    $("#sh-date").onchange=upd; $("#sh-shift").onchange=upd; $("#sh-body").oninput=e=>{ S.body=e.target.value; };
+    $("#sh-addsum").onclick=()=>{ const t=state._shiftSummaryText||""; if(!t) return toast("Δεν υπάρχει κάτι για σύνοψη.");
+      const b=$("#sh-body"); b.value=(b.value.trim()?b.value.trim()+"\n\n":"")+t; S.body=b.value; };
+    $("#sh-save").onclick=async()=>{
+      const body=$("#sh-body").value.trim(); if(!body) return toast("Γράψε τι παραδίδεις.");
+      const { error } = await sb.from("shift_log").insert({tenant_id:state.tenantId, shift_date:S.date, shift:S.shift, body, created_by:state.profile.id});
+      if(error) return toast("Σφάλμα: "+error.message);
+      S.body=""; $("#sh-body").value=""; toast("Η παράδοση καταχωρήθηκε"); loadShiftLog(); };
+    $("#tk-add").onclick=async()=>{
+      const title=$("#tk-title").value.trim(); if(!title) return toast("Γράψε την εκκρεμότητα.");
+      const { error } = await sb.from("shift_tasks").insert({tenant_id:state.tenantId, title, unit_id:$("#tk-unit").value||null, due_date:$("#tk-due").value||null, created_by:state.profile.id});
+      if(error) return toast("Σφάλμα: "+error.message); $("#tk-title").value=""; toast("Προστέθηκε"); loadShiftTasks(); };
+    loadShiftSummary();
+  }
+  loadShiftTasks(); loadShiftLog();
+}
+async function loadShiftSummary(){
+  const S=state.shiftForm, box=$("#sh-summary"); if(!box) return;
+  const {from,to}=shiftWindow(S.date,S.shift), f=from.toISOString(), t=to.toISOString(), T=state.tenantId;
+  const [fe, pr, al, ac, inc, tk] = await Promise.all([
+    sb.from("feeding").select("unit_id,feed_date,mass_t").eq("tenant_id",T).gte("created_at",f).lt("created_at",t).limit(2000),
+    sb.from("production").select("unit_id,log_date").eq("tenant_id",T).gte("created_at",f).lt("created_at",t).limit(200),
+    sb.from("alerts").select("severity,message,metric").eq("tenant_id",T).gte("created_at",f).lt("created_at",t).limit(200),
+    sb.from("alerts").select("metric,ack_comment").eq("tenant_id",T).gte("acknowledged_at",f).lt("acknowledged_at",t).limit(200),
+    sb.from("incidents").select("title,severity,ended_at").eq("tenant_id",T).gte("started_at",f).lt("started_at",t).limit(50),
+    sb.from("shift_tasks").select("title").eq("tenant_id",T).gte("done_at",f).lt("done_at",t).limit(100)]);
+  const lines=[], feedBy={};
+  (fe.data||[]).forEach(r=>{ const k=r.unit_id+"|"+r.feed_date; feedBy[k]=(feedBy[k]||0)+Number(r.mass_t||0); });
+  Object.entries(feedBy).forEach(([k,m])=>{ const [u,d]=k.split("|"); lines.push(`Τροφοδοσία ${unitName(u)} ${fmtDate(d)}: ${fmtNum(m)} t`); });
+  (pr.data||[]).forEach(r=>lines.push(`Παραγωγή καταχωρίστηκε: ${unitName(r.unit_id)} ${fmtDate(r.log_date)}`));
+  (al.data||[]).forEach(a=>lines.push(`Συναγερμός (${a.severity==="critical"?"κρίσιμος":"προειδοποίηση"}): ${a.message||a.metric}`));
+  (ac.data||[]).forEach(a=>lines.push(`Επιβεβαιώθηκε: ${a.metric}${a.ack_comment?` — «${a.ack_comment}»`:""}`));
+  (inc.data||[]).forEach(i=>lines.push(`Συμβάν (${INC_SEV[i.severity]}): ${i.title}${i.ended_at?" — έκλεισε":" — ΣΕ ΕΞΕΛΙΞΗ"}`));
+  (tk.data||[]).forEach(x=>lines.push(`Ολοκληρώθηκε: ${x.title}`));
+  state._shiftSummaryText = lines.length ? `Σύνοψη ${SHIFT[S.shift]} ${fmtDate(S.date)}:\n- `+lines.join("\n- ") : "";
+  box.innerHTML = `<b>Αυτόματη σύνοψη βάρδιας</b> (${fmtDateTime(from)} – ${fmtDateTime(to)})`
+    + (lines.length ? `<ul>${lines.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>` : `<div>Καμία καταγεγραμμένη κίνηση σε αυτή τη βάρδια.</div>`);
+}
+async function loadShiftTasks(){
+  const box=$("#sh-tasks"); if(!box) return;
+  const { data } = await sb.from("shift_tasks").select("*").eq("tenant_id",state.tenantId).is("done_at",null).order("created_at",{ascending:true}).limit(200);
+  const list=data||[], today=localDate(), n=$("#sh-open-n"); if(n) n.textContent=`${list.length} ανοιχτές`;
+  box.innerHTML = list.length ? `<ul class="task-list">${list.map(t=>{ const late=t.due_date&&t.due_date<today, dueToday=t.due_date===today;
+      return `<li data-task="${t.id}"><div><b>${esc(t.title)}</b>${t.unit_id?` <span class="badge st">${esc(unitName(t.unit_id))}</span>`:""}
+        ${late?`<span class="badge high">εκπρόθεσμο ${fmtDate(t.due_date)}</span>`:dueToday?`<span class="badge warnb">σήμερα</span>`:t.due_date?`<span class="badge st">έως ${fmtDate(t.due_date)}</span>`:""}
+        <div class="small muted">${esc(personName(t.created_by))} · ${fmtDateTime(t.created_at)} — εκκρεμεί ${fmtDuration(Date.now()-new Date(t.created_at))}</div></div>
+        ${canWrite()?`<button class="btn sm" data-done="${t.id}">✓ Έγινε</button>`:""}</li>`; }).join("")}</ul>`
+    : `<div class="empty" style="padding:14px">Καμία ανοιχτή εκκρεμότητα ✓</div>`;
+  box.querySelectorAll("[data-done]").forEach(b=>b.onclick=async()=>{
+    const note=prompt("Σημείωση ολοκλήρωσης (προαιρετικά):",""); if(note===null) return;
+    const { error } = await sb.from("shift_tasks").update({done_at:new Date().toISOString(), done_by:state.profile.id, done_note:note.trim()||null}).eq("id",b.dataset.done);
+    if(error) return toast("Σφάλμα: "+error.message); toast("Ολοκληρώθηκε"); loadShiftTasks(); });
+}
+async function loadShiftLog(){
+  const box=$("#sh-log"); if(!box) return;
+  const { data } = await sb.from("shift_log").select("*").eq("tenant_id",state.tenantId).gte("shift_date",daysAgoDate(14))
+    .order("created_at",{ascending:false}).limit(200);
+  box.innerHTML = (data||[]).length ? `<div class="shift-log">${data.map(e=>`<article class="shift-entry"><header><b>${fmtDate(e.shift_date)} · ${SHIFT[e.shift]||e.shift}</b>
+      <span class="small muted">${esc(personName(e.created_by))} · ${fmtDateTime(e.created_at)}</span></header><div class="pre">${esc(e.body)}</div></article>`).join("")}</div>`
+    : `<div class="empty">Καμία παράδοση τις τελευταίες 14 ημέρες.</div>`;
+}
+
+// ------------------------------------------------------------- Συμβάντα --
+async function renderIncidents(){
+  const main=$("#main");
+  main.innerHTML=`<div class="page-head"><div><h1 class="page-title">Συμβάντα</h1>
+      <div class="sub">Καταγραφή συμβάντων για ασφαλιστική & επιθεώρηση — σοβαρό ή έκτακτο συμβάν σε εξέλιξη βγάζει συναγερμό</div></div>
+      ${canWrite()?`<button class="btn primary" id="inc-new">＋ Νέο συμβάν</button>`:""}</div>
+    <div class="stats" id="inc-stats"></div>
+    <div class="panel"><div class="body" id="inc-body"><div class="empty">Φόρτωση…</div></div></div>`;
+  if(canWrite()) $("#inc-new").onclick=()=>incidentForm();
+  await loadPeople();
+  const { data, error } = await sb.from("incidents").select("*").eq("tenant_id",state.tenantId).order("started_at",{ascending:false}).limit(500);
+  const body=$("#inc-body"); if(!body) return;
+  if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  const rows=data||[], year=String(new Date().getFullYear()), open=rows.filter(i=>!i.ended_at);
+  $("#inc-stats").innerHTML=statTile("Σε εξέλιξη", open.length, open.some(i=>i.severity!=="minor")?"var(--high)":"var(--ink)")
+    +statTile(`Συμβάντα ${year}`, rows.filter(i=>String(i.started_at).slice(0,4)===year).length)
+    +statTile("Έκτακτης ανάγκης", rows.filter(i=>i.severity==="emergency"&&String(i.started_at).slice(0,4)===year).length);
+  state._incidents=rows;
+  body.innerHTML = rows.length ? table(["Έναρξη","Χωνευτής","Τύπος","Σοβαρότητα","Τίτλος","Διάρκεια",""],
+    rows.map(i=>[fmtDateTime(i.started_at), esc(i.unit_id?unitName(i.unit_id):"—"), esc(INC_KIND[i.kind]||i.kind), incSevBadge(i.severity),
+      `<div class="cell-wrap">${esc(i.title)}</div>`, i.ended_at ? fmtDuration(new Date(i.ended_at)-new Date(i.started_at)) : `<span class="badge high">σε εξέλιξη</span>`,
+      `<span style="display:flex;gap:6px;justify-content:flex-end">${canWrite()?`<button class="btn ghost sm" data-iedit="${i.id}">✎</button>`:""}<button class="btn ghost sm" data-irep="${i.id}" title="Αναφορά για εκτύπωση / PDF">🖨</button></span>`]))
+    : `<div class="empty">Δεν έχουν καταγραφεί συμβάντα.</div>`;
+  body.querySelectorAll("[data-iedit]").forEach(b=>b.onclick=()=>incidentForm(rows.find(i=>i.id===b.dataset.iedit)));
+  body.querySelectorAll("[data-irep]").forEach(b=>b.onclick=()=>incidentReport(rows.find(i=>i.id===b.dataset.irep)));
+}
+function incidentForm(i, preset){
+  const isEdit=!!(i&&i.id), v=k=>(i&&i[k]!=null)?i[k]:(preset&&preset[k]!=null?preset[k]:""), body=el("div");
+  body.innerHTML=`<div id="if-msg"></div>
+    <div class="row">
+      <div class="field"><label>Τύπος</label><select class="input" id="if-kind">${Object.entries(INC_KIND).map(([k,l])=>`<option value="${k}"${(v("kind")||"chp_trip")===k?" selected":""}>${l}</option>`).join("")}</select></div>
+      <div class="field"><label>Σοβαρότητα</label><select class="input" id="if-sev">${Object.entries(INC_SEV).map(([k,l])=>`<option value="${k}"${(v("severity")||"minor")===k?" selected":""}>${l}</option>`).join("")}</select></div>
+      <div class="field"><label>Χωνευτής</label><select class="input" id="if-unit"><option value="">— όλη η μονάδα —</option>${state.units.map(u=>`<option value="${u.id}"${v("unit_id")===u.id?" selected":""}>${esc(u.name)}</option>`).join("")}</select></div>
+    </div>
+    <div class="field"><label>Τίτλος (τι συνέβη)</label><input class="input" id="if-title" maxlength="200" value="${esc(v("title"))}" placeholder="π.χ. Trip ΣΗΘ — υψηλή θερμοκρασία ψύξης"></div>
+    <div class="row">
+      <div class="field"><label>Έναρξη</label><input class="input" id="if-start" type="datetime-local" value="${toLocalInput(v("started_at")||new Date().toISOString())}"></div>
+      <div class="field"><label>Λήξη (κενό = σε εξέλιξη)</label><div style="display:flex;gap:6px"><input class="input" id="if-end" type="datetime-local" value="${toLocalInput(v("ended_at"))}"><button class="btn sm" type="button" id="if-now">Τώρα</button></div></div>
+    </div>
+    <div class="field"><label>Περιγραφή</label><textarea class="input" id="if-desc" rows="3">${esc(v("description"))}</textarea></div>
+    <div class="field"><label>Ενέργειες που έγιναν</label><textarea class="input" id="if-act" rows="3">${esc(v("actions"))}</textarea></div>
+    <div class="field"><label>Ποιος ειδοποιήθηκε (και πότε)</label><input class="input" id="if-notif" value="${esc(v("notified"))}" placeholder="π.χ. Υπεύθυνος μονάδας 03:20, service ΣΗΘ 03:40"></div>
+    <div class="field"><label>Φωτογραφία ${v("photo_path")?`<span class="badge ok">υπάρχει</span>`:""}</label><input class="input" id="if-photo" type="file" accept="image/*" capture="environment"></div>
+    <p class="small muted" style="margin:0">Σοβαρό ή έκτακτο συμβάν <b>σε εξέλιξη</b> εμφανίζεται ως συναγερμός σε όλους· κλείνει μόλις συμπληρωθεί η λήξη.</p>`;
+  modal(isEdit?"Επεξεργασία συμβάντος":"Νέο συμβάν", body, async close=>{
+    const msg=t=>{ $("#if-msg").innerHTML=`<div class="msg err">${esc(t)}</div>`; };
+    const payload={kind:$("#if-kind").value, severity:$("#if-sev").value, unit_id:$("#if-unit").value||null, title:$("#if-title").value.trim(),
+      started_at:fromLocalInput($("#if-start").value), ended_at:fromLocalInput($("#if-end").value),
+      description:$("#if-desc").value.trim()||null, actions:$("#if-act").value.trim()||null, notified:$("#if-notif").value.trim()||null};
+    if(!payload.title) return msg("Συμπλήρωσε τίτλο.");
+    if(!payload.started_at) return msg("Συμπλήρωσε την ώρα έναρξης.");
+    if(payload.ended_at && payload.ended_at<payload.started_at) return msg("Η λήξη είναι πριν από την έναρξη.");
+    let id=isEdit?i.id:null;
+    const res = isEdit ? await sb.from("incidents").update(payload).eq("id",id)
+                       : await sb.from("incidents").insert({...payload, tenant_id:state.tenantId, created_by:state.profile.id}).select("id").single();
+    if(res.error) return msg("Σφάλμα: "+res.error.message);
+    if(!id) id=res.data && res.data.id;
+    const file=$("#if-photo").files[0];
+    if(file && id){
+      if(file.size>15*1024*1024) toast("Η φωτογραφία ξεπερνά τα 15MB — δεν ανέβηκε.");
+      else { const path=`${state.tenantId}/incidents/${id}/${Date.now()}_${file.name.replace(/[^\w.\-]+/g,"_")}`;
+        const { error:ue } = await sb.storage.from("attachments").upload(path, file, {contentType:file.type||undefined});
+        if(ue) toast("Το συμβάν αποθηκεύτηκε, η φωτογραφία όχι: "+ue.message);
+        else await sb.from("incidents").update({photo_path:path}).eq("id",id); }
+    }
+    close(); toast(isEdit?"Αποθηκεύτηκε":"Το συμβάν καταγράφηκε"); refreshAlertBadge(); if(state.view==="incidents") renderIncidents();
+  });
+  $("#if-now").onclick=()=>{ $("#if-end").value=toLocalInput(new Date().toISOString()); };
+}
+async function incidentReport(i){
+  await loadPeople();
+  let photo="";
+  if(i.photo_path){ const { data } = await sb.storage.from("attachments").createSignedUrl(i.photo_path, 600); if(data&&data.signedUrl&&data.signedUrl!=="about:blank") photo=data.signedUrl; }
+  const w=window.open("","_blank"); if(!w) return toast("Επίτρεψε τα αναδυόμενα παράθυρα για την αναφορά.");
+  const row=(k,v)=>`<tr><th>${k}</th><td>${v}</td></tr>`, tenant=(state.tenants||[]).find(t=>t.id===state.tenantId);
+  w.document.write(`<!doctype html><html lang="el"><head><meta charset="utf-8"><title>Αναφορά συμβάντος</title>
+    <style>body{font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#212c25;margin:32px;max-width:760px}h1{font-size:20px;margin:0 0 4px}
+    table{border-collapse:collapse;width:100%;margin-top:16px}th,td{border:1px solid #ccc;padding:8px 10px;text-align:left;vertical-align:top}th{width:180px;background:#f6f3ec}
+    .pre{white-space:pre-wrap}img{max-width:100%;margin-top:16px;border:1px solid #ccc}.sig{margin-top:48px;display:flex;gap:48px}.sig div{flex:1;border-top:1px solid #999;padding-top:6px;font-size:12px}</style></head><body class="incident-report">
+    <h1>Αναφορά συμβάντος</h1><div>${esc(tenant?tenant.name:"")} · εκτυπώθηκε ${esc(fmtDateTime(new Date()))}</div>
+    <table>${row("Τίτλος",`<b>${esc(i.title)}</b>`)}${row("Τύπος",esc(INC_KIND[i.kind]||i.kind))}${row("Σοβαρότητα",esc(INC_SEV[i.severity]||i.severity))}
+      ${row("Χωνευτής",esc(i.unit_id?unitName(i.unit_id):"Όλη η μονάδα"))}${row("Έναρξη",esc(fmtDateTime(i.started_at)))}
+      ${row("Λήξη",esc(i.ended_at?fmtDateTime(i.ended_at):"σε εξέλιξη"))}${row("Διάρκεια",esc(i.ended_at?fmtDuration(new Date(i.ended_at)-new Date(i.started_at)):"—"))}
+      ${row("Περιγραφή",`<div class="pre">${esc(i.description||"—")}</div>`)}${row("Ενέργειες",`<div class="pre">${esc(i.actions||"—")}</div>`)}
+      ${row("Ειδοποιήθηκαν",esc(i.notified||"—"))}${row("Καταγραφή από",esc(personName(i.created_by))+" · "+esc(fmtDateTime(i.created_at)))}</table>
+    ${photo?`<img src="${esc(photo)}" alt="Φωτογραφία συμβάντος">`:i.photo_path?`<p><i>Συνημμένη φωτογραφία: ${esc(i.photo_path.split("/").pop())}</i></p>`:""}
+    <div class="sig"><div>Χειριστής βάρδιας</div><div>Υπεύθυνος μονάδας</div></div></body></html>`);
+  w.document.close(); setTimeout(()=>{ try{ w.focus(); w.print(); }catch(_){} },300);
+}
+
+// ------------------------------------------------------------- Έκτακτα --
+async function renderEmergency(){
+  const main=$("#main");
+  main.innerHTML=`<div class="page-head"><div><h1 class="page-title">🆘 Έκτακτη ανάγκη</h1>
+      <div class="sub">Τηλέφωνα με ένα πάτημα και κάρτες ενεργειών ανά σενάριο</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${canWrite()?`<button class="btn primary" id="em-inc">＋ Καταγραφή συμβάντος</button>`:""}<button class="btn" id="em-print">🖨 Εκτύπωση καρτών</button></div></div>
+    <div class="panel" style="margin-bottom:16px"><h3 style="display:flex;justify-content:space-between;align-items:center"><span>📞 Τηλέφωνα</span>${isAdmin()?`<button class="btn sm" id="ct-new">＋ Επαφή</button>`:""}</h3>
+      <div class="pad" id="em-contacts"><div class="empty">Φόρτωση…</div></div></div>
+    <div id="em-cards" class="card-grid"><div class="empty">Φόρτωση…</div></div>`;
+  if(canWrite()) $("#em-inc").onclick=()=>incidentForm(null,{severity:"major"});
+  $("#em-print").onclick=()=>{ $$("#em-cards details").forEach(d=>d.open=true); setTimeout(()=>window.print(),100); };
+  if(isAdmin()) $("#ct-new").onclick=()=>contactForm();
+  const T=state.tenantId;
+  const [{ data:ct }, { data:cards }] = await Promise.all([
+    sb.from("contacts").select("*").eq("tenant_id",T).order("sort_order").limit(200),
+    sb.from("emergency_cards").select("*").or(`tenant_id.is.null,tenant_id.eq.${T}`).order("sort_order").limit(200)]);
+  const box=$("#em-contacts"); if(!box) return;
+  const tel=p=>String(p||"").replace(/[^\d+]/g,"");
+  const contacts=(ct||[]).slice().sort((a,b)=>(b.is_emergency-a.is_emergency)||(a.sort_order-b.sort_order));
+  box.innerHTML = contacts.length ? `<div class="contact-grid">${contacts.map(c=>`<div class="contact ${c.is_emergency?"sos":""}">
+      <div class="who"><b>${esc(c.name)}</b>${c.role?`<div class="small muted">${esc(c.role)}</div>`:""}${c.notes?`<div class="small muted">${esc(c.notes)}</div>`:""}</div>
+      ${c.phone?`<a class="btn ${c.is_emergency?"danger-solid":"primary"} call" href="tel:${esc(tel(c.phone))}" aria-label="Κλήση ${esc(c.name)} ${esc(c.phone)}">📞 ${esc(c.phone)}</a>`:""}
+      ${c.phone2?`<a class="btn call" href="tel:${esc(tel(c.phone2))}" style="font-size:15px;min-height:44px">📞 ${esc(c.phone2)}</a>`:""}
+      ${isAdmin()?`<span class="contact-act"><button class="btn ghost sm" data-cedit="${c.id}">✎</button><button class="btn ghost sm danger" data-cdel="${c.id}">✕</button></span>`:""}</div>`).join("")}</div>`
+    : `<div class="empty">Καμία επαφή. ${isAdmin()?"Πρόσθεσε 112, Πυροσβεστική, ΕΚΑΒ, ΔΕΔΔΗΕ, service ΣΗΘ, υπεύθυνο μονάδας.":"Ζήτησε από τον διαχειριστή να τις προσθέσει."}</div>`;
+  box.querySelectorAll("[data-cedit]").forEach(b=>b.onclick=()=>contactForm(contacts.find(c=>c.id===b.dataset.cedit)));
+  box.querySelectorAll("[data-cdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("Διαγραφή επαφής;")) return;
+    const { error } = await sb.from("contacts").delete().eq("id",b.dataset.cdel); if(error) return toast("Σφάλμα: "+error.message); renderEmergency(); });
+  // effective cards: the tenant's own version replaces the global template of the same scenario
+  const by={}; (cards||[]).forEach(c=>{ if(!by[c.scenario]||c.tenant_id) by[c.scenario]=c; });
+  const list=Object.values(by).sort((a,b)=>a.sort_order-b.sort_order);
+  $("#em-cards").innerHTML = list.map(c=>`<details class="em-card" data-scenario="${esc(c.scenario)}"><summary><b>${esc(c.title)}</b>
+      ${c.tenant_id?`<span class="badge ok">της μονάδας</span>`:`<span class="badge st">πρότυπο</span>`}</summary>
+      <ol>${String(c.steps).split("\n").filter(s=>s.trim()).map(s=>`<li>${esc(s)}</li>`).join("")}</ol>
+      ${!c.tenant_id?`<p class="small muted">Γενικό πρότυπο — ο διαχειριστής το προσαρμόζει στο εγκεκριμένο σχέδιο έκτακτης ανάγκης της μονάδας.</p>`:""}
+      ${isAdmin()?`<button class="btn sm" data-card="${esc(c.scenario)}">${c.tenant_id?"✎ Επεξεργασία":"Προσαρμογή"}</button>`:""}</details>`).join("")
+    || `<div class="empty">Δεν υπάρχουν κάρτες — τρέξε το db/seed.sql.</div>`;
+  $$("#em-cards [data-card]").forEach(b=>b.onclick=()=>cardForm(by[b.dataset.card]));
+}
+function contactForm(c){
+  const body=el("div");
+  body.innerHTML=`<div class="field"><label>Όνομα / υπηρεσία</label><input class="input" id="ct-name" value="${esc(c?.name||"")}"></div>
+    <div class="row"><div class="field"><label>Ρόλος</label><input class="input" id="ct-role" value="${esc(c?.role||"")}" placeholder="π.χ. Service ΣΗΘ"></div>
+      <div class="field"><label>Σειρά</label><input class="input" id="ct-sort" type="number" value="${c?.sort_order??100}"></div></div>
+    <div class="row"><div class="field"><label>Τηλέφωνο</label><input class="input" id="ct-phone" type="tel" value="${esc(c?.phone||"")}"></div>
+      <div class="field"><label>Δεύτερο τηλέφωνο</label><input class="input" id="ct-phone2" type="tel" value="${esc(c?.phone2||"")}"></div></div>
+    <div class="field"><label>Σημειώσεις</label><input class="input" id="ct-notes" value="${esc(c?.notes||"")}"></div>
+    <label class="small" style="display:flex;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="ct-sos" ${c?.is_emergency?"checked":""}> Έκτακτη ανάγκη (εμφανίζεται πρώτη, κόκκινο κουμπί)</label>`;
+  modal(c?"Επεξεργασία επαφής":"Νέα επαφή", body, async close=>{
+    const payload={name:$("#ct-name").value.trim(), role:$("#ct-role").value.trim()||null, phone:$("#ct-phone").value.trim()||null,
+      phone2:$("#ct-phone2").value.trim()||null, notes:$("#ct-notes").value.trim()||null, is_emergency:$("#ct-sos").checked, sort_order:Number($("#ct-sort").value)||100};
+    if(!payload.name) return toast("Συμπλήρωσε όνομα.");
+    const { error } = c ? await sb.from("contacts").update(payload).eq("id",c.id) : await sb.from("contacts").insert({...payload, tenant_id:state.tenantId});
+    if(error) return toast("Σφάλμα: "+error.message); close(); toast("Αποθηκεύτηκε"); renderEmergency(); });
+}
+function cardForm(c){
+  const own=!!c.tenant_id, body=el("div");
+  body.innerHTML=`<div class="field"><label>Τίτλος</label><input class="input" id="cf-title" value="${esc(c.title)}"></div>
+    <div class="field"><label>Βήματα (ένα ανά γραμμή)</label><textarea class="input" id="cf-steps" rows="10">${esc(c.steps)}</textarea></div>
+    <p class="small muted">${own?"Η κάρτα της μονάδας αντικαθιστά το γενικό πρότυπο.":"Αποθηκεύεται ως έκδοση της μονάδας· το γενικό πρότυπο μένει ως έχει."}</p>`;
+  modal(own?"Επεξεργασία κάρτας":"Προσαρμογή κάρτας", body, async close=>{
+    const payload={title:$("#cf-title").value.trim(), steps:$("#cf-steps").value.trim()};
+    if(!payload.title||!payload.steps) return toast("Συμπλήρωσε τίτλο και βήματα.");
+    const { error } = own ? await sb.from("emergency_cards").update(payload).eq("id",c.id)
+      : await sb.from("emergency_cards").insert({...payload, tenant_id:state.tenantId, scenario:c.scenario, sort_order:c.sort_order});
+    if(error) return toast("Σφάλμα: "+error.message); close(); toast("Αποθηκεύτηκε"); renderEmergency(); });
+}
+
+// ------------------------------------------------------- Συντήρηση ΣΗΘ --
+const maintState = m => m.hours_left<=0 ? "crit" : (m.hours_left<=Math.max(m.interval_hours*0.1,50) ? "warn" : "ok");
+async function renderMaintenance(){
+  const main=$("#main");
+  main.innerHTML=`<div class="page-head"><div><h1 class="page-title">Συντήρηση ΣΗΘ</h1>
+      <div class="sub">Εργασίες ανά ώρες λειτουργίας — οι ώρες μετρούν αυτόματα από τις «Ώρες ΣΗΘ» της παραγωγής μετά την τελευταία εκτέλεση</div></div>
+      ${isAdmin()?`<button class="btn primary" id="mt-new">＋ Εργασία</button>`:""}</div>
+    <div class="panel" style="margin-bottom:16px"><div class="body" id="mt-body"><div class="empty">Φόρτωση…</div></div></div>
+    <div class="panel"><h3>Ιστορικό εργασιών</h3><div class="body" id="mt-log"><div class="empty">Φόρτωση…</div></div></div>`;
+  if(isAdmin()) $("#mt-new").onclick=()=>planForm();
+  await loadPeople();
+  const T=state.tenantId;
+  const [{ data:st, error }, { data:log }] = await Promise.all([
+    sb.from("maintenance_status").select("*").eq("tenant_id",T).limit(500),
+    sb.from("maintenance_log").select("*").eq("tenant_id",T).order("done_on",{ascending:false}).limit(100)]);
+  const body=$("#mt-body"); if(!body) return;
+  if(error){ body.innerHTML=`<div class="empty">Σφάλμα: ${esc(error.message)}</div>`; return; }
+  const rows=(st||[]).slice().sort((a,b)=>a.hours_left-b.hours_left);
+  body.innerHTML = rows.length ? table(["Χωνευτής / ΣΗΘ","Εργασία","Κάθε","Από την τελευταία","Υπόλοιπο","Κατάσταση","Τελευταία",""],
+    rows.map(m=>{ const st2=maintState(m), pct=Math.min(Math.max(m.hours_since/m.interval_hours,0),1.2);
+      return [esc(unitName(m.unit_id)), `<b>${esc(m.task)}</b>${m.notes?`<div class="small muted">${esc(m.notes)}</div>`:""}`, fmtNum(m.interval_hours)+" h",
+        `<div class="meter" title="${Math.round(pct*100)}%"><span style="width:${Math.min(pct,1)*100}%;background:${stColor(st2)}"></span></div><span class="small">${fmtNum(m.hours_since)} h</span>`,
+        `<b style="color:${stColor(st2)}">${m.hours_left<=0?"υπέρβαση "+fmtNum(-m.hours_left):fmtNum(m.hours_left)} h</b>`,
+        st2==="crit"?`<span class="badge high">⛔ Οφείλεται</span>`:st2==="warn"?`<span class="badge warnb">⚠ Σύντομα</span>`:`<span class="badge ok">✓ ΟΚ</span>`,
+        m.last_done_on?fmtDate(m.last_done_on):"—",
+        `<span style="display:flex;gap:6px;justify-content:flex-end">${canWrite()?`<button class="btn sm" data-mdone="${m.id}">✓ Έγινε</button>`:""}${isAdmin()?`<button class="btn ghost sm" data-medit="${m.id}">✎</button><button class="btn ghost sm danger" data-mdel="${m.id}">✕</button>`:""}</span>`]; }))
+    : `<div class="empty">Καμία εργασία συντήρησης. ${isAdmin()?"Πρόσθεσε π.χ. «Αλλαγή λαδιών» κάθε 2.000 h, «Μπουζί», «Φίλτρο ενεργού άνθρακα».":""}</div>`;
+  body.querySelectorAll("[data-mdone]").forEach(b=>b.onclick=()=>serviceForm(rows.find(m=>m.id===b.dataset.mdone)));
+  body.querySelectorAll("[data-medit]").forEach(b=>b.onclick=()=>planForm(rows.find(m=>m.id===b.dataset.medit)));
+  body.querySelectorAll("[data-mdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("Διαγραφή εργασίας και του ιστορικού της;")) return;
+    const { error:e } = await sb.from("maintenance_plans").delete().eq("id",b.dataset.mdel); if(e) return toast("Σφάλμα: "+e.message); renderMaintenance(); });
+  const planName=id=>{ const m=(st||[]).find(x=>x.id===id); return m?`${unitName(m.unit_id)} — ${m.task}`:"—"; };
+  $("#mt-log").innerHTML = (log||[]).length ? table(["Ημ/νία","Εργασία","Ωρόμετρο","Σημειώσεις","Από"],
+    log.map(l=>[fmtDate(l.done_on), esc(planName(l.plan_id)), l.engine_hours!=null?fmtNum(l.engine_hours)+" h":"—", `<div class="cell-wrap">${esc(l.notes||"")}</div>`, esc(personName(l.created_by))]))
+    : `<div class="empty">Δεν έχει καταγραφεί εργασία ακόμα.</div>`;
+}
+function planForm(m){
+  const body=el("div");
+  body.innerHTML=`<div class="row"><div class="field"><label>Χωνευτής / ΣΗΘ</label><select class="input" id="pf-unit">${state.units.map(u=>`<option value="${u.id}"${m&&m.unit_id===u.id?" selected":""}>${esc(u.name)}</option>`).join("")}</select></div>
+      <div class="field"><label>Κάθε (ώρες λειτουργίας)</label><input class="input" id="pf-int" type="number" min="1" step="1" value="${m?.interval_hours??""}" placeholder="π.χ. 2000"></div></div>
+    <div class="field"><label>Εργασία</label><input class="input" id="pf-task" list="pf-tasks" value="${esc(m?.task||"")}"><datalist id="pf-tasks">
+      ${["Αλλαγή λαδιών & φίλτρου λαδιού","Μπουζί","Φίλτρο ενεργού άνθρακα (αποθείωση)","Φίλτρο αέρα","Ρύθμιση βαλβίδων","Γενική επιθεώρηση (κατασκευαστής)"].map(t=>`<option value="${t}">`).join("")}</datalist></div>
+    <div class="row"><div class="field"><label>Τελευταία εκτέλεση</label><input class="input" id="pf-last" type="date" value="${m?.last_done_on||""}"></div></div>
+    <div class="field"><label>Σημειώσεις</label><input class="input" id="pf-notes" value="${esc(m?.notes||"")}" placeholder="π.χ. σύμφωνα με το εγχειρίδιο του κατασκευαστή"></div>`;
+  modal(m?"Επεξεργασία εργασίας":"Νέα εργασία συντήρησης", body, async close=>{
+    const payload={unit_id:$("#pf-unit").value, task:$("#pf-task").value.trim(), interval_hours:Number($("#pf-int").value), last_done_on:$("#pf-last").value||null, notes:$("#pf-notes").value.trim()||null};
+    if(!payload.unit_id||!payload.task) return toast("Συμπλήρωσε χωνευτή και εργασία.");
+    if(!(payload.interval_hours>0)) return toast("Οι ώρες πρέπει να είναι θετικός αριθμός.");
+    const { error } = m ? await sb.from("maintenance_plans").update(payload).eq("id",m.id) : await sb.from("maintenance_plans").insert({...payload, tenant_id:state.tenantId});
+    if(error) return toast("Σφάλμα: "+error.message); close(); toast("Αποθηκεύτηκε"); renderMaintenance(); });
+}
+function serviceForm(m){
+  const body=el("div");
+  body.innerHTML=`<p><b>${esc(unitName(m.unit_id))} — ${esc(m.task)}</b></p>
+    <div class="row"><div class="field"><label>Ημερομηνία</label><input class="input" id="sf-date" type="date" max="${localDate()}" value="${localDate()}"></div>
+      <div class="field"><label>Ωρόμετρο μηχανής (προαιρετικά)</label><input class="input" id="sf-h" type="number" min="0" step="any" inputmode="decimal"></div></div>
+    <div class="field"><label>Σημειώσεις</label><textarea class="input" id="sf-notes" rows="2" placeholder="π.χ. λάδι 220 l, φίλτρο, δείγμα λαδιού για ανάλυση"></textarea></div>
+    <p class="small muted" style="margin:0">Αν η μηχανή σταμάτησε για τη συντήρηση, σημείωσε «🔧 Προγραμματισμένη στάση» στην εγγραφή παραγωγής της ημέρας — έτσι δεν βγαίνει συναγερμός διαθεσιμότητας.</p>`;
+  modal("Καταγραφή εργασίας", body, async close=>{
+    const done_on=$("#sf-date").value; if(!done_on) return toast("Συμπλήρωσε ημερομηνία.");
+    const h=$("#sf-h").value;
+    const { error } = await sb.from("maintenance_log").insert({tenant_id:state.tenantId, plan_id:m.id, done_on, engine_hours:h!==""?Number(h):null,
+      notes:$("#sf-notes").value.trim()||null, created_by:state.profile.id});
+    if(error) return toast("Σφάλμα: "+error.message); close(); toast("Καταγράφηκε — ο μετρητής ωρών μηδένισε"); renderMaintenance(); }, "Καταγραφή");
+}
 
 /* ============================ Mass & energy balance ============================ */
 const RHO_CH4 = 0.7175, RHO_CO2 = 1.977;                                    // kg/Nm³ (0 °C, 1 atm)
@@ -3679,6 +4136,13 @@ const I18N = {
   "🔔 Ενεργές ειδοποιήσεις":"🔔 Active alerts","Όλες →":"All →",
   // production log (operator-review fixes)
   "Ώρες πυρσού":"Flare hours",
+  // shift & safety (Phase 12)
+  "Βάρδια":"Shift","Συμβάντα":"Incidents","Συντήρηση ΣΗΘ":"CHP maintenance","Έκτακτα":"Emergency","🆘 Έκτακτη ανάγκη":"🆘 Emergency",
+  "📝 Παράδοση βάρδιας":"📝 Shift hand-over","Ημερολόγιο βάρδιας (14 ημέρες)":"Shift log (14 days)","✔ Καταχώρηση παράδοσης":"✔ Save hand-over",
+  "↧ Πρόσθεσε τη σύνοψη":"↧ Add the summary","＋ Νέο συμβάν":"+ New incident","＋ Καταγραφή συμβάντος":"+ Log incident","🖨 Εκτύπωση καρτών":"🖨 Print cards",
+  "📞 Τηλέφωνα":"📞 Phone numbers","＋ Επαφή":"+ Contact","＋ Εργασία":"+ Task","Ιστορικό εργασιών":"Service history","✓ Έγινε":"✓ Done",
+  "Επιβεβαίωση συναγερμού":"Acknowledge alarm","Από":"Since","Σε εξέλιξη":"In progress","Οφείλεται":"Due","Σύντομα":"Soon",
+  "πρότυπο":"template","της μονάδας":"plant's own","Προσαρμογή":"Customise",
   // «Σήμερα» / trends (Phase 11)
   "Ηλ. ενέργεια χθες":"Electricity yesterday","Διαθεσιμότητα ΣΗΘ χθες":"CHP availability yesterday","Κρίσιμες":"Critical",
   "Κανονικά":"Normal","Προσοχή":"Attention","Κρίσιμο":"Critical","Ηλ. ενέργεια":"Electricity","Θερμοκρασία":"Temperature",

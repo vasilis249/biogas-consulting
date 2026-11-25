@@ -24,9 +24,17 @@ replaceOnce('const HARDCODED_KEY = "";', 'const HARDCODED_KEY = "demo-anon-key";
 replaceOnce(/<title>[^<]*<\/title>/, "<title>BioGas — DEMO</title>", "<title>");
 replaceOnce("<body>", `<body>
 <div style="position:fixed;bottom:12px;right:12px;z-index:90;background:#b5663f;color:#fff;font:700 12px/1 -apple-system,Segoe UI,Roboto,sans-serif;padding:7px 11px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.18)" title="Δεδομένα επίδειξης στη μνήμη — επαναφορά με refresh">DEMO · δεδομένα επίδειξης</div>`, "<body>");
+// global emergency-card templates: parsed from db/seed.sql so the demo shows exactly what a fresh install seeds
+const seed = fs.readFileSync(path.join(root, "db", "seed.sql"), "utf8");
+const cardsSql = seed.slice(seed.indexOf("insert into public.emergency_cards"));
+const cards = [...cardsSql.matchAll(/\(null, '([a-z_]+)', '((?:[^']|'')*)',\s*E'((?:[^']|'')*)', (\d+)\)/g)]
+  .map(m => ({ scenario: m[1], title: m[2].replace(/''/g, "'"), steps: m[3].replace(/''/g, "'").replace(/\\n/g, "\n"), sort_order: Number(m[4]) }));
+if (cards.length !== 8) throw new Error(`demo build: expected 8 emergency cards in db/seed.sql, found ${cards.length}`);
+const mockWithCards = mock.replace("/*__EMERGENCY_CARDS__*/[]", JSON.stringify(cards));
+if (mockWithCards === mock) throw new Error("demo build: emergency-card placeholder not found in mock.js");
 const idx = html.lastIndexOf("<script>");          // the app script is the last one
 if (idx < 0) throw new Error("demo build: app <script> not found");
-html = html.slice(0, idx) + "<script>\n" + mock + "\n</script>\n" + html.slice(idx);
+html = html.slice(0, idx) + "<script>\n" + mockWithCards + "\n</script>\n" + html.slice(idx);
 
 fs.writeFileSync(path.join(__dirname, "index.html"), html);
 console.log(`demo/index.html built (${(html.length / 1024).toFixed(0)} KB)`);

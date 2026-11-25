@@ -170,9 +170,17 @@ check((await r3Tile("Όριο 29(10)")) === "—" && /Δεν ισχύει ακό
 console.log("Alarms");
 await go("alerts");
 const before = await badge();
+check((await page.$$eval("#al-body thead th", h => h.map(x => x.textContent))).includes("Από"), "alarm list shows «since when» (created_at)");
+const ackId = await page.$eval("[data-ack]", b => b.dataset.ack);
 await page.click("[data-ack]");
+await sleep(300);
+await page.fill("#ack-c", "Ενημερώθηκε ο μηχανικός — νέο FOS/TAC αύριο");
+await page.click(".modal .foot .btn.primary");
 await sleep(600);
 check((await badge()) === before - 1, `acknowledging decrements the badge (${before} → ${await badge()})`);
+const acked = await db(id => window.__BIOGAS_DEMO_DB__.alerts.find(a => a.id === id), ackId);
+check(acked.ack_comment === "Ενημερώθηκε ο μηχανικός — νέο FOS/TAC αύριο" && !!acked.acknowledged_by, "acknowledgement stores who and the comment");
+check(/Ενημερώθηκε ο μηχανικός/.test(await page.textContent("#al-body")), "comment shown in the alarm list");
 await page.click('[data-af="all"]');
 await sleep(500);
 check(/Επιλύθηκε/.test(await page.textContent("#al-body")), "history shows resolved alarms");
@@ -339,6 +347,84 @@ check(/🔧/.test(await page.textContent("#pr-body")), "planned stop marked in t
 await go("params");
 check(/\+0,05 σε 14 ημ\./.test(await page.textContent("#params-body")), "FOS/TAC trend rule visible in Parameters");
 await shot("10-today");
+
+console.log("Wave B — shift, incidents, emergency, maintenance");
+await go("dashboard");
+check(/Φίλτρο ενεργού άνθρακα \(αποθείωση\): οφείλεται/.test(await page.textContent(`${card("un2")}`)), "Σήμερα: overdue CHP service shown on Χ2");
+check(/📌 Εκκρεμότητες/.test(await page.textContent(`${card("un2")}`)), "Σήμερα: open shift items shown per digester");
+
+await go("shift");
+await waitFor(async () => /Αυτόματη σύνοψη/.test(await page.textContent("#sh-summary")));
+await page.selectOption("#sh-shift", "morning");
+await page.fill("#sh-date", await page.evaluate(() => daysAgoDate(1)));
+await page.dispatchEvent("#sh-date", "change");
+await waitFor(async () => /Τροφοδοσία|Συναγερμός|Παραγωγή/.test(await page.textContent("#sh-summary")));
+check(/Τροφοδοσία|Συναγερμός|Παραγωγή/.test(await page.textContent("#sh-summary")), "automatic shift summary lists what happened in that shift");
+await page.click("#sh-addsum");
+await page.fill("#sh-body", (await page.inputValue("#sh-body")) + "\nΠαραδίδω: Χ2 υπό παρακολούθηση.");
+const nLog = await db(() => window.__BIOGAS_DEMO_DB__.shift_log.length);
+await page.click("#sh-save");
+await waitFor(async () => (await db(() => window.__BIOGAS_DEMO_DB__.shift_log.length)) === nLog + 1);
+const lastLog = await db(() => window.__BIOGAS_DEMO_DB__.shift_log.slice(-1)[0]);
+check(lastLog.shift === "morning" && /Σύνοψη/.test(lastLog.body) && /Παραδίδω/.test(lastLog.body), "hand-over saved with the summary and the note");
+await page.fill("#tk-title", "Έλεγχος στάθμης δεξαμενής χωνεύματος");
+await page.click("#tk-add");
+await waitFor(async () => /στάθμης δεξαμενής/.test(await page.textContent("#sh-tasks")));
+check((await page.$$("#sh-tasks li")).length === 3, "open items carry over (2 from earlier shifts + 1 new)");
+await page.click('#sh-tasks li:first-child [data-done]');
+await waitFor(async () => (await page.$$("#sh-tasks li")).length === 2);
+check((await db(() => window.__BIOGAS_DEMO_DB__.shift_tasks.filter(t => t.done_at).length)) === 1, "«✓ Έγινε» closes an item");
+
+await go("incidents");
+check(/Trip ΣΗΘ/.test(await page.textContent("#inc-body")) && /1 h 15/.test(await page.textContent("#inc-body")), "past incident listed with its duration");
+await page.click("#inc-new"); await sleep(300);
+await page.selectOption("#if-kind", "gas_leak"); await page.selectOption("#if-sev", "emergency"); await page.selectOption("#if-unit", "un2");
+await page.fill("#if-title", "Μυρωδιά αερίου στο αντλιοστάσιο Χ2");
+await page.click(".modal .foot .btn.primary");
+await waitFor(async () => !(await page.$(".modal")));
+let incAl = (await openAlerts()).find(a => a.kind === "incident");
+check(incAl && incAl.severity === "critical" && /ΕΚΤΑΚΤΗ ΑΝΑΓΚΗ ΣΕ ΕΞΕΛΙΞΗ/.test(incAl.message), "emergency incident in progress → critical alarm for everyone");
+await page.click('#inc-body tbody tr:first-child [data-iedit]'); await sleep(300);
+await page.click("#if-now"); await page.fill("#if-act", "Απομόνωση, έλεγχος με ανιχνευτή, σφίξιμο φλάντζας.");
+await page.click(".modal .foot .btn.primary");
+await waitFor(async () => !(await page.$(".modal")));
+check(!(await openAlerts()).some(a => a.kind === "incident"), "closing the incident resolves its alarm");
+const [popup] = await Promise.all([page.waitForEvent("popup"), page.click('#inc-body tbody tr:first-child [data-irep]')]);
+await popup.waitForLoadState();
+check(/Αναφορά συμβάντος/.test(await popup.textContent("body")) && /σφίξιμο φλάντζας/.test(await popup.textContent("body")), "printable incident report (PDF via print)");
+await popup.close();
+
+await go("emergency");
+check((await page.$$("#em-cards details")).length === 8, "8 emergency cards (from db/seed.sql)");
+check(!!(await page.$('#em-contacts a[href="tel:112"]')) && !!(await page.$('#em-contacts a[href="tel:199"]')), "one-tap call buttons (tel:)");
+const firstCall = await page.$eval("#em-contacts .contact:first-child .call", e => e.textContent);
+check(/112/.test(firstCall), "emergency numbers listed first");
+await page.click('#em-cards details[data-scenario="gas_leak"] summary');
+check(/ATEX/.test(await page.textContent('#em-cards details[data-scenario="gas_leak"]')), "card opens with its steps");
+await page.click('#em-cards details[data-scenario="gas_leak"] [data-card]'); await sleep(300);
+await page.fill("#cf-steps", "Βήμα της μονάδας 1\nΒήμα της μονάδας 2");
+await page.click(".modal .foot .btn.primary");
+await waitFor(async () => /της μονάδας/.test(await page.textContent('#em-cards details[data-scenario="gas_leak"]')));
+check((await db(() => window.__BIOGAS_DEMO_DB__.emergency_cards.filter(c => c.scenario === "gas_leak").length)) === 2, "«Προσαρμογή» keeps the template and adds the plant's own card");
+
+await go("maintenance");
+check(/Οφείλεται/.test(await page.textContent("#mt-body")) && /ΟΚ/.test(await page.textContent("#mt-body")), "service status by running hours (due / ok)");
+check(/υπέρβαση/.test(await page.textContent("#mt-body")), "overdue shows hours over the interval");
+check(await page.evaluate(() => [maintState({ hours_left: 9, interval_hours: 1000 }), maintState({ hours_left: 500, interval_hours: 1000 }), maintState({ hours_left: -1, interval_hours: 1000 })].join()) === "warn,ok,crit",
+  "«σύντομα» = last 10 % of the interval (min 50 h)");
+await page.click('#mt-body [data-mdone="mp4"]'); await sleep(300);
+await page.fill("#sf-notes", "Αλλαγή ενεργού άνθρακα 2 m³");
+await page.click(".modal .foot .btn.primary");
+await waitFor(async () => (await db(() => window.__BIOGAS_DEMO_DB__.maintenance_log.length)) === 2);
+check(await db(() => window.__BIOGAS_DEMO_DB__.maintenance_plans.find(p => p.id === "mp4").last_done_on) === await page.evaluate(() => localDate()),
+  "logging the service resets its hour counter");
+await page.evaluate(() => { state.profile = { ...state.profile, role: "operator", is_platform_admin: false }; });
+await go("emergency");
+check(!(await page.$("#ct-new")) && !(await page.$("#em-cards [data-card]")), "operator: contacts & cards read-only");
+await go("maintenance");
+check(!(await page.$("#mt-new")) && !!(await page.$("#mt-body [data-mdone]")), "operator logs services but cannot change plans");
+await page.evaluate(() => { state.profile = { ...state.profile, role: "admin", is_platform_admin: true }; });
+await shot("11-emergency");
 
 console.log("English & mobile");
 await page.evaluate(() => localStorage.setItem("lp-lang", "en"));
