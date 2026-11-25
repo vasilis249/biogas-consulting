@@ -63,6 +63,11 @@ psqlx -d upgraded -c "
 psqlx -d upgraded -f db/migrations/0007_feedstock_digestate_alerts.sql >/dev/null
 psqlx -d upgraded -f db/migrations/0007_feedstock_digestate_alerts.sql >/dev/null
 ok "migration 0007 applied twice (idempotent)"
+psqlx -d upgraded -f db/migrations/0009_red3_sustainability.sql >/dev/null
+psqlx -d upgraded -f db/migrations/0009_red3_sustainability.sql >/dev/null
+ok "migration 0009 applied twice (idempotent)"
+[ "$(psqlx -d upgraded -At -c "select red_class from feedstocks where category='manure' limit 1")" = "manure" ] \
+  && ok "RED III class back-filled from category on upgrade"
 [ "$(psqlx -d upgraded -At -c "select count(*) - count(distinct code) from parameters where tenant_id is null")" = 0 ] \
   && ok "duplicate global parameters merged"
 [ "$(psqlx -d upgraded -At -c "select count(*) from analyses a join parameters p on p.id = a.parameter_id where p.code = 'fos_tac'")" = 1 ] \

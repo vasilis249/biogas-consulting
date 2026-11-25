@@ -57,13 +57,17 @@
       ["pomace", "Ελαιοπυρήνας (υγρός, 2 φάσεων)", "agro_industrial", 30, 90, 330, 0, 45], ["citrus", "Φλούδες εσπεριδοειδών", "agro_industrial", 20, 95, 380, 0, 30],
       ["rumen", "Περιεχόμενο στομάχων (σφαγεία)", "agro_industrial", 15, 85, 350, -10, 20], ["food", "Απόβλητα τροφίμων / εστίασης", "food_waste", 25, 90, 450, -20, 18],
       ["glycerin", "Ακατέργαστη γλυκερίνη", "other", 80, 95, 450, 50, 150],
-    ].map(r => ({ id: "fs-" + r[0], tenant_id: null, name: r[1], category: r[2], ts_pct: r[3], vs_pct: r[4], bmp: r[5], price_eur_t: r[6], cn_ratio: r[7],
+    ].map(r => ({ id: "fs-" + r[0], tenant_id: null, name: r[1], category: r[2],
+      red_class: ({ manure: "manure", energy_crop: "maize", food_waste: "biowaste" })[r[2]] || "other",
+      ts_pct: r[3], vs_pct: r[4], bmp: r[5], price_eur_t: r[6], cn_ratio: r[7],
       notes: "Ενδεικτικές τιμές βιβλιογραφίας — επιβεβαιώστε με ανάλυση TS/VS/BMP", active: true, created_at: iso(dayAt(400)) }))
-      .concat([{ id: "fs-t-sorghum", tenant_id: T, name: "Ενσίρωμα σόργου (ιδίας παραγωγής)", category: "energy_crop", ts_pct: 28, vs_pct: 93, bmp: 310,
+      .concat([{ id: "fs-t-sorghum", tenant_id: T, name: "Ενσίρωμα σόργου (ιδίας παραγωγής)", category: "energy_crop", red_class: "maize", ts_pct: 28, vs_pct: 93, bmp: 310,
         price_eur_t: 32, cn_ratio: 35, notes: "Ανάλυση εργαστηρίου 09/2026", active: true, created_at: iso(dayAt(70)) }]),
     units: [
-      { id: "un1", tenant_id: T, name: "Χωνευτής 1", location: "Γραμμή Α", capacity_kw: 500, digester_m3: 2500, notes: "CSTR μεσόφιλος", created_at: iso(dayAt(400)) },
-      { id: "un2", tenant_id: T, name: "Χωνευτής 2", location: "Γραμμή Β", capacity_kw: 999, digester_m3: 4000, notes: "CSTR μεσόφιλος", created_at: iso(dayAt(380)) },
+      { id: "un1", tenant_id: T, name: "Χωνευτής 1", location: "Γραμμή Α", capacity_kw: 500, digester_m3: 2500, notes: "CSTR μεσόφιλος",
+        commissioning_date: "2014-06-01", rated_thermal_input_mw: 2.2, red_case: 1, digestate_storage: "open", red_product: "electricity", offgas_combustion: false, created_at: iso(dayAt(400)) },
+      { id: "un2", tenant_id: T, name: "Χωνευτής 2", location: "Γραμμή Β", capacity_kw: 999, digester_m3: 4000, notes: "CSTR μεσόφιλος",
+        commissioning_date: "2024-02-15", rated_thermal_input_mw: 2.6, red_case: 1, digestate_storage: "open", red_product: "electricity", offgas_combustion: false, created_at: iso(dayAt(380)) },
     ],
     recipes: [], samples: [], analyses: [], production: [], feeding: [], digestate: [], files: [], audit_log: [], alerts: [],
     alert_recipients: [

@@ -7,6 +7,7 @@ const fs = require("fs"), path = require("path");
 const root = path.join(__dirname, "..");
 let html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const mock = fs.readFileSync(path.join(__dirname, "mock.js"), "utf8");
+const red3 = fs.readFileSync(path.join(root, "lib", "red3.js"), "utf8");
 
 function replaceOnce(from, to, what) {
   const n = typeof from === "string" ? html.split(from).length - 1 : (html.match(from) || []).length;
@@ -15,6 +16,9 @@ function replaceOnce(from, to, what) {
 }
 // the real supabase-js is replaced by the mock (xlsx stays: Excel export works in the demo)
 replaceOnce(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@[^"]+"><\/script>\n?/, "", "supabase-js <script>");
+// lib/red3.js is a sibling of index.html in the repo but not of demo/index.html,
+// so inline it (the file stays the single source of truth for the unit tests).
+replaceOnce('<script src="lib/red3.js"></script>', `<script>\n${red3}\n</script>`, "red3 <script>");
 replaceOnce('const HARDCODED_URL = "";', 'const HARDCODED_URL = "demo://local";', "HARDCODED_URL");
 replaceOnce('const HARDCODED_KEY = "";', 'const HARDCODED_KEY = "demo-anon-key";', "HARDCODED_KEY");
 replaceOnce(/<title>[^<]*<\/title>/, "<title>BioGas — DEMO</title>", "<title>");

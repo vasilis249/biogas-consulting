@@ -24,6 +24,7 @@
 ## Δομή
 ```
 index.html                      # όλη η εφαρμογή
+lib/red3.js                     # RED III υπολογιστής GHG (καθαρό module, χωρίς DOM)
 db/schema.sql                   # schema + RLS (Φάσεις 1–4, εκτός Storage)
 db/seed.sql                     # default παράμετροι
 db/migrations/0003_phase3.sql   # invitations + audit triggers
@@ -48,6 +49,7 @@ docs/DESIGN.md                  # αρχιτεκτονική, data model, roadma
 - ✅ Φάση 6 — BioGas edition: biogas παράμετροι, μονάδες/χωνευτές, Παραγωγή + KPIs
 - ✅ Φάση 7 — Υποστρώματα, Τροφοδοσία (OLR/HRT), Χώνευμα (ΖΕΝ), Ειδοποιήσεις + email
 - ✅ Φάση 8 — Ισοζύγιο μάζας & ενέργειας (κλείσιμο, Van Kleeck VSR, η_el/η_th)
+- ✅ Φάση 9 — Αειφορία RED III: μείωση GHG (Παράρτημα VI) έναντι ορίου άρθρου 29(10) — βλ. [`docs/RED3.md`](docs/RED3.md)
 
 ## Tests
 ```bash
@@ -55,6 +57,9 @@ tests/sql/run_local.sh                               # schema, RLS, alarm engine
 ```
 ```bash
 node --experimental-strip-types --test tests/digest.test.mjs   # alert e-mail digest
+```
+```bash
+node --test tests/red3.test.mjs                      # RED III calculator vs official Annex VI tables
 ```
 ```bash
 deno test --allow-env supabase/functions/send-alerts/handler.test.ts

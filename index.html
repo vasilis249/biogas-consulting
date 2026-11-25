@@ -43,6 +43,7 @@
   .input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
   .row{display:flex;gap:12px;flex-wrap:wrap}
   .row>*{flex:1;min-width:140px}
+  .fieldset-sep{margin:6px 0 12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 
   /* ---------- auth / setup screens ---------- */
   .center-wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -198,6 +199,7 @@
     <button class="nav-item" data-view="feeding"><span class="ic">🌾</span> Τροφοδοσία</button>
     <button class="nav-item" data-view="digestate"><span class="ic">♻</span> Χώνευμα</button>
     <button class="nav-item" data-view="massbalance"><span class="ic">⚖</span> Ισοζύγιο</button>
+    <button class="nav-item" data-view="red3"><span class="ic">🌱</span> Αειφορία</button>
     <button class="nav-item" data-view="alerts"><span class="ic">🔔</span> Ειδοποιήσεις<span class="nav-badge hidden" id="alert-badge"></span></button>
     <button class="nav-item" data-view="reports"><span class="ic">📊</span> Reports</button>
     <div class="nav-sep"></div>
@@ -239,6 +241,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="lib/red3.js"></script>
 <script>
 /* ============================================================================
    LabPortal — single-file client (vanilla JS + Supabase)
@@ -417,6 +420,7 @@ function go(view){
   else if(view==="feeding") renderFeeding();
   else if(view==="digestate") renderDigestate();
   else if(view==="massbalance") renderMassBalance();
+  else if(view==="red3") renderRed3();
   else if(view==="alerts") renderAlerts();
   else if(view==="feedstocks") renderFeedstocks();
   else if(view==="reports") renderReports();
@@ -956,12 +960,36 @@ function unitForm(u){
       <div class="field"><label>Ισχύς ΣΗΘ (kWel)</label><input class="input" id="u-kw" type="number" step="any" value="${u?.capacity_kw??""}"></div>
       <div class="field"><label>Όγκος χωνευτή (m³)</label><input class="input" id="u-vol" type="number" step="any" value="${u?.digester_m3??""}"></div>
     </div>
+    <div class="fieldset-sep">Αειφορία RED III (άρθρο 29 — κριτήρια GHG)</div>
+    <div class="row">
+      <div class="field"><label>Ημ/νία έναρξης λειτουργίας</label><input class="input" id="u-comm" type="date" value="${u?.commissioning_date||""}"></div>
+      <div class="field"><label>Ονομαστική θερμική ισχύς (MW)</label><input class="input" id="u-mw" type="number" step="any" value="${u?.rated_thermal_input_mw??""}" placeholder="συνολική, π.χ. 3"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Προϊόν</label><select class="input" id="u-rprod">
+        <option value="electricity"${(u?.red_product||"electricity")==="electricity"?" selected":""}>Ηλεκτρισμός (ΣΗΘ)</option>
+        <option value="transport"${u?.red_product==="transport"?" selected":""}>Βιομεθάνιο (μεταφορές)</option></select></div>
+      <div class="field"><label>Διαμόρφωση ΣΗΘ</label><select class="input" id="u-rcase">
+        <option value="1"${(u?.red_case??1)==1?" selected":""}>Case 1 — ρεύμα+θερμότητα από ΣΗΘ</option>
+        <option value="2"${u?.red_case==2?" selected":""}>Case 2 — ρεύμα δικτύου, θερμ. ΣΗΘ</option>
+        <option value="3"${u?.red_case==3?" selected":""}>Case 3 — ρεύμα δικτύου, θερμ. λέβητα</option></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Αποθήκευση χωνεύματος</label><select class="input" id="u-dgst">
+        <option value="open"${(u?.digestate_storage||"open")==="open"?" selected":""}>Ανοιχτή (open digestate)</option>
+        <option value="close"${u?.digestate_storage==="close"?" selected":""}>Αεροστεγής (close digestate)</option></select></div>
+      <div class="field" style="justify-content:flex-end"><label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="u-offgas" ${u?.offgas_combustion?"checked":""}> Καύση off-gas (μόνο βιομεθάνιο)</label></div>
+    </div>
     <div class="field"><label>Σημειώσεις</label><textarea class="input" id="u-notes" rows="2">${esc(u?.notes||"")}</textarea></div>`;
   modal(u?"Επεξεργασία μονάδας":"Νέα μονάδα", body, async close=>{
     const name=$("#u-name").value.trim(); if(!name)return toast("Το όνομα είναι υποχρεωτικό.");
     const payload={name,location:$("#u-loc").value.trim()||null,notes:$("#u-notes").value.trim()||null,
       capacity_kw:$("#u-kw").value!==""?Number($("#u-kw").value):null,
-      digester_m3:$("#u-vol").value!==""?Number($("#u-vol").value):null};
+      digester_m3:$("#u-vol").value!==""?Number($("#u-vol").value):null,
+      commissioning_date:$("#u-comm").value||null,
+      rated_thermal_input_mw:$("#u-mw").value!==""?Number($("#u-mw").value):null,
+      red_product:$("#u-rprod").value, red_case:Number($("#u-rcase").value),
+      digestate_storage:$("#u-dgst").value, offgas_combustion:$("#u-offgas").checked};
     const { error } = u
       ? await sb.from("units").update(payload).eq("id",u.id)
       : await sb.from("units").insert({...payload,tenant_id:state.tenantId});
@@ -1400,6 +1428,7 @@ const CH4_KWH = 9.97;   // kWh per m³ CH₄ (lower heating value)
 const ETA_EL  = 0.40;   // indicative CHP electrical efficiency
 const N_LIMIT = 170;    // kg N/ha/yr — Nitrates Directive, vulnerable zones (ΖΕΝ)
 const FEED_CAT  = {manure:"Κοπριά",energy_crop:"Ενεργειακή καλλιέργεια",agro_industrial:"Αγροβιομηχανικό",food_waste:"Απόβλητα τροφίμων",other:"Άλλο"};
+const RED_CLASS = {manure:"Κοπριά (wet manure)",maize:"Ενεργειακή καλλιέργεια (maize whole plant)",biowaste:"Βιοαπόβλητα (biowaste)",other:"Άλλο — απαιτεί πραγματικό υπολογισμό"};
 const DIG_DEST  = {field:"Εφαρμογή σε αγρό",storage:"Αποθήκευση σε δεξαμενή",sale:"Πώληση",treatment:"Επεξεργασία",other:"Άλλο"};
 const ALERT_KIND= {parameter:"Παράμετρος",production:"Παραγωγή",feeding:"Τροφοδοσία",digestate:"Χώνευμα"};
 const fsVs  = f => (Number(f&&f.ts_pct)||0)/100 * (Number(f&&f.vs_pct)||0)/100;   // t VS per t fresh
@@ -1483,6 +1512,9 @@ function feedstockForm(f){
       <div class="field"><label>BMP (m³ CH₄/t VS)</label><input class="input fs-calc" id="fs-bmp" type="number" step="any" value="${v("bmp")}"></div>
       <div class="field"><label>C:N</label><input class="input" id="fs-cn" type="number" step="any" value="${v("cn_ratio")}"></div>
     </div>
+    <div class="field"><label>Κατηγορία RED III (προεπιλεγμένες τιμές GHG)</label><select class="input" id="fs-red">
+      ${Object.entries(RED_CLASS).map(([k,l])=>`<option value="${k}"${(f&&f.red_class||"other")===k?" selected":""}>${l}</option>`).join("")}</select>
+      <span class="small muted">Μόνο κοπριά / ενεργειακή καλλιέργεια / βιοαπόβλητα έχουν προεπιλογές στο Παράρτημα VI· τα «άλλα» απαιτούν πραγματικό υπολογισμό.</span></div>
     <div class="hint ok" id="fs-yield"></div>
     <div class="field"><label>Σημειώσεις</label><textarea class="input" id="fs-notes" rows="2">${esc(v("notes"))}</textarea></div>
     <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fs-active" ${f&&f.active===false?"":"checked"}> Ενεργό (εμφανίζεται στον σχεδιασμό σιτηρεσίου)</label>`;
@@ -1491,7 +1523,7 @@ function feedstockForm(f){
   body.querySelectorAll(".fs-calc").forEach(i=>i.oninput=upd); upd();
   modal(isEdit?"Επεξεργασία υποστρώματος":(f?"Προσαρμογή υποστρώματος":"Νέο υπόστρωμα"), body, async close=>{
     const num=id=>{ const x=$(id).value; return x!==""?Number(x):null; };
-    const payload={name:$("#fs-name").value.trim(), category:$("#fs-cat").value, ts_pct:num("#fs-ts"), vs_pct:num("#fs-vs"),
+    const payload={name:$("#fs-name").value.trim(), category:$("#fs-cat").value, red_class:$("#fs-red").value, ts_pct:num("#fs-ts"), vs_pct:num("#fs-vs"),
       bmp:num("#fs-bmp"), price_eur_t:num("#fs-price"), cn_ratio:num("#fs-cn"), notes:$("#fs-notes").value.trim()||null,
       active:$("#fs-active").checked};
     if(!payload.name) return toast("Δώσε όνομα.");
@@ -2154,6 +2186,211 @@ function exportMassBalanceXlsx(){
   XLSX.writeFile(wb,`Ισοζύγιο_${m.month}${m.unit?"_"+unitName(m.unit):""}.xlsx`); toast("Excel κατέβηκε");
 }
 
+/* ============================ Αειφορία — RED III GHG savings ============================ */
+// Default-value methodology, Annex VI of Directive (EU) 2018/2001 (as amended
+// by 2023/2413). All regulatory figures live in lib/red3.js (window.RED3).
+const RED_VERDICT = {
+  pass:            {cls:"ok",   icon:"✓", t:"Συμμορφώνεται"},
+  fail:            {cls:"crit", icon:"✕", t:"Δεν συμμορφώνεται"},
+  requires_actual: {cls:"warn", icon:"⚠", t:"Απαιτείται πραγματικός υπολογισμός"},
+  out_of_scope:    {cls:"low",  icon:"ℹ", t:"Εκτός υποχρεωτικού πεδίου"},
+  no_threshold_yet:{cls:"low",  icon:"ℹ", t:"Δεν ισχύει όριο ακόμη"},
+  na:              {cls:"na",   icon:"—", t:"Χωρίς δεδομένα"},
+};
+function red3CfgOf(u){ return {
+  product:u?.red_product||"electricity", caseType:Number(u?.red_case||1),
+  digestate:u?.digestate_storage||"open", offgas:!!u?.offgas_combustion };
+}
+async function renderRed3(){
+  const main=$("#main"), yNow=new Date().getFullYear();
+  await loadRefData();
+  const R=state.red3||(state.red3={}); if(!R.year) R.year=yNow;
+  if(!state.units.some(u=>u.id===R.unit)){ R.unit=state.units[0]?.id||""; R._cfgUnit=null; }
+  const u=state.units.find(x=>x.id===R.unit)||null;
+  // (re)seed scenario overrides from the selected unit's stored config
+  if(R._cfgUnit!==R.unit){ Object.assign(R, red3CfgOf(u)); R.valueType="default"; R._cfgUnit=R.unit; }
+  if(!RED3||typeof RED3.assess!=="function"){ main.innerHTML=`<div class="panel"><div class="empty">Το module υπολογισμού (lib/red3.js) δεν φόρτωσε.</div></div>`; return; }
+
+  main.innerHTML=`<div class="page-head">
+      <div><h1 class="page-title">Αειφορία — RED III</h1>
+        <div class="sub">Μείωση εκπομπών αερίων θερμοκηπίου (GHG) με προεπιλεγμένες τιμές Παραρτήματος VI έναντι του ορίου του άρθρου 29(10)</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="margin:0"><label>Έτος</label><input class="input" id="r3-year" type="number" min="2015" max="2100" style="width:100px" value="${R.year}"></div>
+        <div class="field" style="margin:0"><label>Μονάδα</label><select class="input" id="r3-unit"></select></div>
+        <button class="btn" id="r3-xlsx">⤓ Excel</button>
+        <button class="btn" id="r3-print">🖨 Εκτύπωση</button>
+      </div></div>
+    ${u?"":`<div class="hint warn">Δεν υπάρχει μονάδα. Πρόσθεσε μία από «Μονάδες» με ημ/νία έναρξης λειτουργίας & ισχύ για τον έλεγχο ορίου.</div>`}
+    <div class="panel" style="margin-bottom:16px"><h3>Διαμόρφωση (σενάριο)</h3><div class="body">
+      <div class="row">
+        <div class="field"><label>Προϊόν</label><select class="input" id="r3-prod">
+          <option value="electricity">Ηλεκτρισμός (ΣΗΘ)</option><option value="transport">Βιομεθάνιο (μεταφορές)</option></select></div>
+        <div class="field" id="r3-case-wrap"><label>Διαμόρφωση ΣΗΘ</label><select class="input" id="r3-case">
+          <option value="1">Case 1</option><option value="2">Case 2</option><option value="3">Case 3</option></select></div>
+        <div class="field"><label>Αποθήκευση χωνεύματος</label><select class="input" id="r3-dgst">
+          <option value="open">Ανοιχτή</option><option value="close">Αεροστεγής</option></select></div>
+        <div class="field" id="r3-offgas-wrap"><label>Καύση off-gas</label><select class="input" id="r3-offgas">
+          <option value="no">Όχι</option><option value="yes">Ναι</option></select></div>
+        <div class="field"><label>Τιμές</label><select class="input" id="r3-vt">
+          <option value="default">Προεπιλεγμένες (default)</option><option value="typical">Τυπικές (typical)</option></select></div>
+      </div>
+      <div class="small muted">Αρχικές τιμές από τη μονάδα· άλλαξέ τες για διερεύνηση σεναρίων (δεν αποθηκεύονται). Το μίγμα υποστρωμάτων προκύπτει από την πραγματική τροφοδοσία του έτους.</div>
+    </div></div>
+    <div id="r3-verdict"></div>
+    <div class="stats" id="r3-stats"></div>
+    <div id="r3-notes"></div>
+    <div class="row" style="align-items:flex-start;margin-bottom:16px">
+      <div class="panel" style="min-width:320px;flex:2"><h3>Μίγμα & ενεργειακό μερίδιο</h3><div class="body" id="r3-mix"></div></div>
+      <div class="panel" style="min-width:260px;flex:1"><h3>Όριο άρθρου 29(10)</h3><div class="body" id="r3-thr" style="padding:14px 18px"></div></div>
+    </div>
+    <div class="panel"><h3>Σύγκριση σεναρίων (αποθήκευση χωνεύματος × διαμόρφωση)</h3><div class="body" id="r3-scen"></div></div>
+    <div class="hint info" style="margin-top:16px"><b>Μεθοδολογία.</b> Οι τιμές είναι οι <b>προεπιλεγμένες</b> του Παραρτήματος VI της Οδηγίας (ΕΕ) 2018/2001 (όπως τροποποιήθηκε από την 2023/2413),
+      συνδυασμένες κατά ενεργειακό μερίδιο (W<sub>n</sub>, S<sub>n</sub>, P<sub>n</sub>). Συγκριτικό ορυκτού: ηλεκτρισμός 183, βιομεθάνιο μεταφορών 94 g CO₂eq/MJ.
+      Οι προεπιλογές είναι συντηρητικές· μια πραγματική πιστοποίηση (actual values, ISCC/REDcert) συνήθως δίνει καλύτερο αποτέλεσμα. <b>Δεν υποκαθιστά πιστοποίηση.</b></div>`;
+
+  const us=$("#r3-unit"); state.units.forEach(x=>us.append(el("option",{value:x.id},x.name))); us.value=R.unit;
+  $("#r3-prod").value=R.product; $("#r3-case").value=String(R.caseType); $("#r3-dgst").value=R.digestate;
+  $("#r3-offgas").value=R.offgas?"yes":"no"; $("#r3-vt").value=R.valueType||"default";
+  const syncVis=()=>{ const tr=$("#r3-prod").value==="transport";
+    $("#r3-case-wrap").style.display=tr?"none":""; $("#r3-offgas-wrap").style.display=tr?"":"none"; };
+  syncVis();
+  $("#r3-year").onchange=e=>{ R.year=Number(e.target.value)||yNow; loadRed3(); };
+  us.onchange=()=>{ R.unit=us.value; R._cfgUnit=null; renderRed3(); };
+  const upd=()=>{ R.product=$("#r3-prod").value; R.caseType=Number($("#r3-case").value); R.digestate=$("#r3-dgst").value;
+    R.offgas=$("#r3-offgas").value==="yes"; R.valueType=$("#r3-vt").value; syncVis(); loadRed3(); };
+  ["r3-prod","r3-case","r3-dgst","r3-offgas","r3-vt"].forEach(id=>$("#"+id).onchange=upd);
+  $("#r3-xlsx").onclick=exportRed3Xlsx; $("#r3-print").onclick=()=>window.print();
+  loadRed3();
+}
+async function loadRed3(){
+  const R=state.red3, T=state.tenantId, u=state.units.find(x=>x.id===R.unit)||null;
+  const from=`${R.year}-01-01`, to=`${R.year+1}-01-01`;
+  const byUnit=q=>R.unit ? q.eq("unit_id",R.unit) : q;
+  const [fe,pr]=await Promise.all([
+    byUnit(sb.from("feeding").select("feedstock_id,mass_t").eq("tenant_id",T).gte("feed_date",from).lt("feed_date",to).limit(20000)),
+    byUnit(sb.from("production").select("kwh_el,biogas_m3,ch4_pct").eq("tenant_id",T).gte("log_date",from).lt("log_date",to).limit(5000)),
+  ]);
+  if(fe.error){ $("#r3-mix").innerHTML=`<div class="empty">Σφάλμα: ${esc(fe.error.message)}</div>`; return; }
+  const feed=fe.data||[], prod=pr.data||[], SUP=["manure","maize","biowaste"], MJ_CH4=CH4_KWH*3.6;  // 9.97 kWh×3.6 = MJ/m³ CH₄
+  // aggregate fresh mass + real CH₄ energy (BMP-based) per feedstock & per RED III class
+  const byClass={}, byClassE={}, byName={}; let eTot=0;
+  feed.forEach(r=>{ const f=state.feedstockById[r.feedstock_id]||{}, cls=f.red_class||"other", m=Number(r.mass_t)||0;
+    const eMJ=m*(fsCh4(f)||0)*MJ_CH4;
+    byClass[cls]=(byClass[cls]||0)+m; byClassE[cls]=(byClassE[cls]||0)+eMJ; eTot+=eMJ;
+    const g=byName[r.feedstock_id]||(byName[r.feedstock_id]={name:f.name||"(άγνωστο)",cls,m:0,e:0}); g.m+=m; g.e+=eMJ; });
+  const hasAny=Object.values(byClass).some(x=>x>0);
+  const supportedLines=Object.entries(byClass).filter(([c,v])=>v>0&&SUP.includes(c)).map(([substrate,massFresh])=>({substrate,massFresh}));
+  const otherClasses=Object.keys(byClass).filter(c=>byClass[c]>0&&!SUP.includes(c));
+  const uncoveredShare = eTot>0 ? otherClasses.reduce((s,c)=>s+(byClassE[c]||0),0)/eTot : (otherClasses.length?1:0);
+  let kwhEl=0, ch4M3=0;
+  prod.forEach(p=>{ kwhEl+=Number(p.kwh_el)||0; ch4M3+=(Number(p.biogas_m3)||0)*(Number(p.ch4_pct)||0)/100; });
+  const product=R.product;
+  const mjProduct = product==="transport" ? ch4M3*MJ_CH4 : kwhEl*3.6;          // kWh→MJ
+  const mjCovered = mjProduct*(1-uncoveredShare);                              // only the fraction with defaults
+
+  const cfg={ lines:supportedLines, product, caseType:R.caseType, digestate:R.digestate, offgas:R.offgas?"yes":"no",
+    valueType:R.valueType, commissioningDate:u?.commissioning_date||null,
+    ratedThermalInputMW:u?.rated_thermal_input_mw!=null?Number(u.rated_thermal_input_mw):null, gaseous:true, mjProduct:mjCovered };
+  const a=RED3.assess(cfg);                 // pass/fail for the supported sub-mix
+  const m=a.mix, t=a.threshold;
+  const hasOther = uncoveredShare>0.005;
+  const verdict = !hasAny ? "na" : (hasOther ? "requires_actual" : a.verdict);
+  state._red3={R,u,a,verdict,supportedLines,byClass,byClassE,byName,eTot,uncoveredShare,hasOther,hasAny,otherClasses,kwhEl,ch4M3,mjProduct,mjCovered,from,to};
+
+  const v=RED_VERDICT[verdict]||RED_VERDICT.na;
+  $("#r3-verdict").innerHTML = hasAny ? `<div class="hint ${v.cls==='crit'?'warn':v.cls==='ok'?'ok':'info'}" style="font-size:15px">
+      <b style="font-size:17px">${v.icon} ${v.t}</b>${m.savingPct!=null?` — μείωση GHG <b>${m.savingPct}%</b>${hasOther?" (στο τμήμα με προεπιλογές)":""}`:""}
+      ${t.minSavingPct?` έναντι ορίου <b>${t.minSavingPct}%</b>${a.marginPct!=null?` (περιθώριο ${a.marginPct>=0?"+":""}${a.marginPct} μ.β.)`:""}`:""}
+      ${hasOther?`<br><span class="small">Το <b>${Math.round(uncoveredShare*100)}%</b> της ενέργειας προέρχεται από υποστρώματα χωρίς προεπιλεγμένη τιμή (${otherClasses.map(c=>RED_CLASS[c]||c).join(", ")}) — για πλήρη συμμόρφωση απαιτείται πραγματικός υπολογισμός.</span>`:""}
+    </div>` : `<div class="hint info">Καμία τροφοδοσία για το ${R.year}${R.unit?" στη μονάδα αυτή":""}. Καταχώρισε τροφοδοσία για να υπολογιστεί η μείωση GHG.</div>`;
+
+  const sav=m.savingPct, thr=t.minSavingPct;
+  const savColor = sav==null?"na":(thr&&sav>=thr?"ok":thr?"crit":"ok");
+  $("#r3-stats").innerHTML = hasAny ? (
+    statTile(hasOther?"Μείωση GHG (τμήμα)":"Μείωση GHG", sav!=null?sav+"%":"—", stColor(savColor))+
+    statTile("Όριο 29(10)", thr?thr+"%":"—")+
+    statTile(product==="transport"?"Εκπομπές βιομεθανίου":"Εκπομπές (ανά MJ ηλ.)", m.E!=null?RED3.round(m.E,1)+" g":"—")+
+    statTile(product==="transport"?"Ενέργεια βιομεθανίου":"Ηλ. ενέργεια (έτος)", fmtNum(Math.round(mjProduct/3600))+" MWh")+
+    statTile("Αποφυγή CO₂eq", a.avoidedTonnesCO2e!=null?fmtNum(Math.round(a.avoidedTonnesCO2e))+" t"+(hasOther?"*":""):"—")
+  ) : "";
+
+  // threshold panel
+  $("#r3-thr").innerHTML = `
+    <div style="font-size:13px;line-height:1.55">
+      <div><b>${t.minSavingPct?t.minSavingPct+"% ελάχιστη μείωση":"—"}</b></div>
+      <div class="small muted" style="margin:6px 0">${esc(t.rule||"")}</div>
+      ${u?.commissioning_date?`<div class="small">Έναρξη λειτουργίας: <b>${u.commissioning_date}</b></div>`:`<div class="small muted">Χωρίς ημ/νία έναρξης — ρύθμισέ την στη μονάδα.</div>`}
+      ${u?.rated_thermal_input_mw!=null?`<div class="small">Θερμική ισχύς: <b>${fmtNum(u.rated_thermal_input_mw)} MW</b></div>`:""}
+      ${!t.inScope&&t.scopeNote?`<div class="hint info" style="margin:8px 0 0;padding:8px 10px">${esc(t.scopeNote)}</div>`:""}
+      ${a.caseNote?`<div class="small muted" style="margin-top:8px">${esc(a.caseNote)}</div>`:""}
+    </div>`;
+
+  // mix breakdown: each class by share of TOTAL plant CH₄ energy (BMP-based)
+  const rows=Object.entries(byClass).filter(([,v2])=>v2>0).sort((x,y)=>(byClassE[y[0]]||0)-(byClassE[x[0]]||0)).map(([cls,mass])=>{
+    const share = eTot>0 ? (byClassE[cls]||0)/eTot*100 : 0, supported=SUP.includes(cls);
+    const en = supported ? RED3.emissionValue(cls,{product,caseType:R.caseType,digestate:R.digestate,offgas:R.offgas?"yes":"no",valueType:R.valueType}) : null;
+    return [ esc(RED_CLASS[cls]||cls), fmtNum(Math.round(mass))+" t", share.toFixed(1)+"%",
+      supported?(en!=null?RED3.round(en,1):"—"):`<span class="badge warnb">χωρίς προεπιλογή</span>` ];
+  });
+  $("#r3-mix").innerHTML = rows.length ? table(
+    ["Κατηγορία RED III","Νωπή μάζα","% ενέργειας CH₄","Eₙ g CO₂eq/MJ"], rows)
+    : `<div class="empty">Καμία τροφοδοσία για το ${R.year}.</div>`;
+
+  // notes
+  const notes=[];
+  if(hasOther) notes.push(`Υποστρώματα χωρίς προεπιλεγμένη τιμή (${otherClasses.map(c=>RED_CLASS[c]||c).join(", ")}): η Οδηγία δίνει προεπιλογές μόνο για κοπριά, ενεργειακές καλλιέργειες (maize whole plant) και βιοαπόβλητα. Αντιστοιχούν στο <b>${Math.round(uncoveredShare*100)}%</b> της ενέργειας — για το σύνολο της μονάδας απαιτείται πραγματικός υπολογισμός (actual values) ή πιστοποιημένη τιμή.`);
+  if(verdict==="fail") notes.push(`Με προεπιλεγμένες τιμές ${hasOther?"το τμήμα με προεπιλογές ":"η μονάδα "}<b>υπολείπεται ${Math.abs(a.marginPct)} μ.β.</b> του ορίου. Επιλογές: αύξηση μεριδίου κοπριάς, αεροστεγής αποθήκευση χωνεύματος (close digestate), ή πραγματικός υπολογισμός/πιστοποίηση που συνήθως δίνει υψηλότερη μείωση.`);
+  if(verdict==="no_threshold_yet") notes.push(`Για τη μονάδα αυτή το όριο 80% ενεργοποιείται αργότερα (μονάδα προ 2021 — μετά 15 έτη λειτουργίας). Μέχρι τότε δεν υπάρχει υποχρεωτικό όριο, αλλά ο υπολογισμός χρησιμεύει για αυτοπαρακολούθηση.`);
+  if(R.digestate==="open" && (verdict==="fail"||verdict==="requires_actual")) notes.push(`Το σενάριο χρησιμοποιεί <b>ανοιχτή</b> αποθήκευση χωνεύματος — δοκίμασε «Αεροστεγής» για να δεις την επίδραση.`);
+  if(!u?.rated_thermal_input_mw) notes.push(`Χωρίς ονομαστική θερμική ισχύ δεν ελέγχεται η εφαρμοσιμότητα (≥2 MW) ούτε το κατώφλι 10 MW — συμπλήρωσέ την στη μονάδα.`);
+  if(hasOther && a.avoidedTonnesCO2e!=null) notes.push(`* Η αποφυγή CO₂eq λογίζεται μόνο για το <b>${Math.round((1-uncoveredShare)*100)}%</b> της ενέργειας που έχει προεπιλεγμένη τιμή.`);
+  $("#r3-notes").innerHTML = notes.length ? `<div class="hint warn">⚠ <b>Παρατηρήσεις</b><ul>${notes.map(n=>`<li>${n}</li>`).join("")}</ul></div>` : "";
+
+  // scenario comparison grid (what-if): savings % for storage × case/offgas
+  renderRed3Scenarios(cfg);
+}
+function renderRed3Scenarios(cfg){
+  const el2=$("#r3-scen"); if(!el2) return;
+  const lines=cfg.lines; if(!lines.length){ el2.innerHTML=`<div class="empty">—</div>`; return; }
+  const cur=`${cfg.digestate}|${cfg.product==="transport"?cfg.offgas:cfg.caseType}`;
+  const mk=(digestate,key)=>{ const o=cfg.product==="transport"?{offgas:key}:{caseType:key};
+    const r=RED3.mix({lines,product:cfg.product,digestate,valueType:cfg.valueType,...o});
+    const hit=`${digestate}|${key}`===cur;
+    return r.savingPct==null?"—":`<span${hit?' style="font-weight:800;text-decoration:underline"':''}>${r.savingPct}%${r.requiresActual?"*":""}</span>`; };
+  const cols = cfg.product==="transport" ? [["no","χωρίς καύση off-gas"],["yes","με καύση off-gas"]]
+                                         : [[1,"Case 1"],[2,"Case 2"],[3,"Case 3"]];
+  const hasOther=(state._red3||{}).hasOther;
+  el2.innerHTML = table(
+    ["Αποθήκευση χωνεύματος", ...cols.map(c=>c[1])],
+    [["open",...cols.map(c=>mk("open",c[0]))],["close",...cols.map(c=>mk("close",c[0]))]]
+      .map(r=>[r[0]==="open"?"Ανοιχτή (open)":"Αεροστεγής (close)", ...r.slice(1)])
+  ) + `<div class="small muted" style="padding:4px 14px">Μείωση GHG (%) στο τμήμα με προεπιλογές, ανά σενάριο· υπογραμμισμένο = τρέχον.${hasOther?" Μέρος του μίγματος δεν έχει προεπιλογή (βλ. παρατηρήσεις).":""}</div>`;
+}
+function exportRed3Xlsx(){
+  const S=state._red3; if(!S||!S.hasAny) return toast("Δεν υπάρχουν δεδομένα για εξαγωγή.");
+  if(!window.XLSX) return toast("Το Excel library δεν φόρτωσε.");
+  const {a,R,u,mjProduct,uncoveredShare,hasOther,byClass,byClassE,eTot}=S, m=a.mix, t=a.threshold;
+  const summary=[
+    {Πεδίο:"Έτος",Τιμή:R.year},{Πεδίο:"Μονάδα",Τιμή:u?.name||"όλες"},
+    {Πεδίο:"Προϊόν",Τιμή:R.product==="transport"?"βιομεθάνιο (μεταφορές)":"ηλεκτρισμός (ΣΗΘ)"},
+    {Πεδίο:"Τιμές",Τιμή:m.valueType},{Πεδίο:"Διαμόρφωση",Τιμή:R.product==="transport"?("off-gas "+(R.offgas?"ναι":"όχι")):("Case "+R.caseType)},
+    {Πεδίο:"Αποθήκευση χωνεύματος",Τιμή:R.digestate},
+    {Πεδίο:"Μείωση GHG % (τμήμα με προεπιλογές)",Τιμή:m.savingPct},{Πεδίο:"Εκπομπές g CO2eq/MJ",Τιμή:m.E},
+    {Πεδίο:"Ενέργεια χωρίς προεπιλογή %",Τιμή:Math.round(uncoveredShare*100)},
+    {Πεδίο:"Όριο 29(10) %",Τιμή:t.minSavingPct},{Πεδίο:"Κανόνας ορίου",Τιμή:t.rule},
+    {Πεδίο:"Ετυμηγορία",Τιμή:(RED_VERDICT[S.verdict]||{}).t},{Πεδίο:"Περιθώριο μ.β.",Τιμή:a.marginPct},
+    {Πεδίο:"Ενέργεια προϊόντος MWh",Τιμή:Math.round(mjProduct/3600)},
+    {Πεδίο:"Αποφυγή CO2eq t"+(hasOther?" (τμήμα)":""),Τιμή:a.avoidedTonnesCO2e},
+    {Πεδίο:"Έναρξη λειτουργίας",Τιμή:u?.commissioning_date||""},{Πεδίο:"Θερμική ισχύς MW",Τιμή:u?.rated_thermal_input_mw??""},
+  ];
+  const mixRows=Object.entries(byClass).filter(([,v])=>v>0).map(([cls,mass])=>({Κατηγορία:RED_CLASS[cls]||cls,"Νωπή μάζα t":Math.round(mass),
+    "% ενέργειας CH4":(eTot>0?(byClassE[cls]||0)/eTot*100:0).toFixed(1),"Προεπιλογή RED III":["manure","maize","biowaste"].includes(cls)?"ναι":"όχι"}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),"Σύνοψη");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mixRows),"Μίγμα");
+  XLSX.writeFile(wb,`Αειφορία_RED3_${R.year}${u?"_"+u.name:""}.xlsx`); toast("Excel κατέβηκε");
+}
+
 /* ============================ helpers: table builder ============================ */
 function table(headers, rows, rowClicks){
   const thead=`<thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead>`;
@@ -2388,6 +2625,19 @@ const I18N = {
   "Απομάκρυνση VS (Van Kleeck)":"VS removal (Van Kleeck)","Μεθάνιο":"Methane","Ενέργεια μεθανίου":"Methane energy",
   "Ηλεκτρική ενέργεια":"Electricity","Θερμική ενέργεια":"Heat","Απώλειες / μη αξιοποίηση":"Losses / unused",
   "Ημέρες":"Days","Νωπό t":"Fresh t","% του VS":"% of VS",
+  // RED III sustainability
+  "Αειφορία":"Sustainability","Αειφορία — RED III":"Sustainability — RED III",
+  "Διαμόρφωση (σενάριο)":"Configuration (scenario)","Προϊόν":"Product","Διαμόρφωση ΣΗΘ":"CHP configuration",
+  "Αποθήκευση χωνεύματος":"Digestate storage","Καύση off-gas":"Off-gas combustion","Τιμές":"Values",
+  "Έτος":"Year","Μονάδα":"Unit","Μίγμα & ενεργειακό μερίδιο":"Mix & energy share","Όριο άρθρου 29(10)":"Article 29(10) threshold",
+  "Σύγκριση σεναρίων (αποθήκευση χωνεύματος × διαμόρφωση)":"Scenario comparison (digestate storage × configuration)",
+  "Μείωση GHG":"GHG saving","Όριο 29(10)":"29(10) threshold","Αποφυγή CO₂eq":"CO₂eq avoided",
+  "Κατηγορία RED III":"RED III class","Νωπή μάζα":"Fresh mass","% μάζας":"% of mass","Ενεργειακό μερίδιο Sₙ":"Energy share Sₙ",
+  "Συμμορφώνεται":"Compliant","Δεν συμμορφώνεται":"Not compliant","Απαιτείται πραγματικός υπολογισμός":"Actual calculation required",
+  "Εκτός υποχρεωτικού πεδίου":"Outside mandatory scope","Δεν ισχύει όριο ακόμη":"Threshold not yet in force",
+  "Ηλεκτρισμός (ΣΗΘ)":"Electricity (CHP)","Βιομεθάνιο (μεταφορές)":"Biomethane (transport)",
+  "Ανοιχτή":"Open","Αεροστεγής":"Gas-tight","Όχι":"No","Ναι":"Yes",
+  "Προεπιλεγμένες (default)":"Default values","Τυπικές (typical)":"Typical values",
 };
 let LANG = localStorage.getItem("lp-lang")||"el";
 function trFull(s){

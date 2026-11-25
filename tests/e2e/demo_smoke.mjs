@@ -128,6 +128,32 @@ const u1 = parseFloat(await mbTile("Απομάκρυνση VS"));
 check(u1 > vsr, `healthy Χωνευτής 1 removes more VS than the plant average (${u1}% > ${vsr}%)`);
 await shot("5b-mass-balance");
 
+console.log("Sustainability (RED III)");
+await go("red3");
+await sleep(300);
+const r3Tile = async k => page.$$eval(".stat", (s, k) => { const t = s.find(x => x.querySelector(".k").textContent === k);
+  return t ? t.querySelector(".v").textContent : null; }, k);
+const r3Saving = async () => { const v = (await r3Tile("Μείωση GHG (τμήμα)")) || (await r3Tile("Μείωση GHG")); return v ? parseFloat(v) : null; };
+await page.selectOption("#r3-unit", "un2");                   // commissioned 2024 → 80% threshold
+await sleep(700);
+check((await r3Tile("Όριο 29(10)")) === "80%", `2024 plant → Article 29(10) threshold 80% (${await r3Tile("Όριο 29(10)")})`);
+check(/άρθρο 29\(10\)\(d\)/.test(await page.textContent("#r3-thr")), "threshold rule cites the commissioning-date clause");
+check((await page.$$("#r3-mix tbody tr")).length >= 3, "feedstock mix broken down by RED III class");
+check(/maize whole plant/.test(await page.textContent("#r3-mix")), "maize class carries its Annex VI default emission value");
+const savOpen = await r3Saving();
+check(savOpen > 0 && savOpen < 100, `default-method GHG saving computed for the supported mix (${savOpen}%)`);
+check(/Απαιτείται πραγματικός υπολογισμός/.test(await page.textContent("#r3-verdict")), "non-default feedstocks flag an actual-calculation requirement");
+await shot("8-red3");
+await page.selectOption("#r3-dgst", "close");                // gas-tight storage ⇒ higher saving
+await sleep(600);
+const savClose = await r3Saving();
+check(savClose > savOpen, `gas-tight digestate raises the saving (${savOpen}% → ${savClose}%)`);
+check((await page.$$("#r3-scen tbody tr")).length === 2, "scenario grid compares open vs close storage");
+await page.selectOption("#r3-unit", "un1");                   // pre-2021 small plant → 80% not in force yet
+await sleep(700);
+check((await r3Tile("Όριο 29(10)")) === "—" && /Δεν ισχύει ακόμη/.test(await page.textContent("#r3-thr")),
+  "pre-2021 plant: 80% threshold not yet in force (Article 29(10)(h))");
+
 console.log("Alarms");
 await go("alerts");
 const before = await badge();
